@@ -1,0 +1,4 @@
+﻿Mô hình,Test Accuracy,Test Macro F1,Test Macro Precision,Test Macro Recall,5-Fold CV Accuracy (Mean),5-Fold CV Accuracy (Std),5-Fold CV F1 (Mean)
+MultinomialNB,0.8594,0.8606,0.8705,0.8594,0.7694,0.0539,0.77
+LogisticRegression,0.8906,0.8916,0.9111,0.8906,0.8056,0.0595,0.8019
+LinearSVC,0.9375,0.9384,0.952,0.9375,0.8649,0.0499,0.8621

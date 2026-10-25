@@ -1,0 +1,51 @@
+{
+  "_comment": "Trọng số 6 tiêu chí (gia, khoang_cach, thoi_gian, do_no, dinh_duong, do_ngon) cho các nhãn gợi ý. Tổng trọng số mỗi profile = 1.0. Nhãn chao_hoi và cam_on_tam_biet không cần trọng số.",
+  "tiet_kiem": {
+    "gia": 0.35,
+    "khoang_cach": 0.15,
+    "thoi_gian": 0.10,
+    "do_no": 0.20,
+    "dinh_duong": 0.10,
+    "do_ngon": 0.10
+  },
+  "healthy": {
+    "gia": 0.10,
+    "khoang_cach": 0.10,
+    "thoi_gian": 0.10,
+    "do_no": 0.15,
+    "dinh_duong": 0.35,
+    "do_ngon": 0.20
+  },
+  "nhanh_gon": {
+    "gia": 0.15,
+    "khoang_cach": 0.25,
+    "thoi_gian": 0.35,
+    "do_no": 0.10,
+    "dinh_duong": 0.05,
+    "do_ngon": 0.10
+  },
+  "no_bung": {
+    "gia": 0.20,
+    "khoang_cach": 0.10,
+    "thoi_gian": 0.10,
+    "do_no": 0.35,
+    "dinh_duong": 0.10,
+    "do_ngon": 0.15
+  },
+  "ngon_doi_gio": {
+    "gia": 0.10,
+    "khoang_cach": 0.10,
+    "thoi_gian": 0.10,
+    "do_no": 0.10,
+    "dinh_duong": 0.15,
+    "do_ngon": 0.45
+  },
+  "can_bang": {
+    "gia": 0.20,
+    "khoang_cach": 0.15,
+    "thoi_gian": 0.15,
+    "do_no": 0.15,
+    "dinh_duong": 0.15,
+    "do_ngon": 0.20
+  }
+}

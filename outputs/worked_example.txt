@@ -1,0 +1,383 @@
+====================================================================================================
+VÍ DỤ TÍNH TAY (WORKED EXAMPLE) – CHƯƠNG 2
+Hệ thống chatbot gợi ý bữa trưa cho sinh viên NEU
+Mọi số liệu dưới đây do công thức tính tay sinh ra và đã được đối chiếu với sklearn (xem mục 1.10, 2.6 và 3).
+Quy ước: bảng in làm tròn 4 chữ số thập phân; phép tính nội bộ dùng độ chính xác đầy đủ.
+====================================================================================================
+
+PHẦN 1. PHÂN LOẠI NHU CẦU BẰNG TF-IDF + MULTINOMIAL NAIVE BAYES
+----------------------------------------------------------------------------------------------------
+1.1. Tham số lấy từ model thật (src/classifier.py: NeedClassifier -> build_model('nb'))
+   TfidfVectorizer: ngram_range=(1, 2), sublinear_tf=True, min_df=1, lowercase=True, use_idf=True, smooth_idf=True, norm='l2'
+                    token_pattern = r"(?u)\b\w\w+\b" (chỉ giữ token ≥ 2 ký tự; '_' thuộc \w nên 'bình_dân' là 1 token)
+   MultinomialNB:   alpha = 0.5, fit_prior = True
+   Công thức:
+     tf'(t,d)   = 1 + ln(tf(t,d))                    (sublinear_tf=True, chỉ áp dụng khi tf > 0)
+     idf(t)     = ln((1 + n) / (1 + df(t))) + 1       (smooth_idf=True), n = số văn bản huấn luyện
+     w(t,d)     = tf'(t,d) × idf(t)
+     x(d)       = w(·,d) / ||w(·,d)||₂                (chuẩn hóa L2)
+     P(C)       = n_C / n
+     N(C,t)     = Σ_{d ∈ C} x_t(d);   N(C) = Σ_t N(C,t)
+     P(t|C)     = (N(C,t) + alpha) / (N(C) + alpha·|V|)
+     log P(C|x) ∝ ln P(C) + Σ_t x_t · ln P(t|C);  P(C|x) = softmax của các giá trị này
+
+1.2. Tập huấn luyện 9 câu (3 nhãn × 3 câu) và kết quả preprocess() của pipeline thật
+   d1  [tiet_kiem] 'cơm bình dân giá rẻ'  ->  ['cơm', 'bình_dân', 'giá', 'rẻ']
+   d2  [tiet_kiem] 'món nào rẻ tiết kiệm'  ->  ['món', 'nào', 'rẻ', 'tiết_kiệm']
+   d3  [tiet_kiem] 'quán ăn rẻ cho sinh viên'  ->  ['quán', 'ăn', 'rẻ', 'sinh_viên']
+   d4  [healthy  ] 'salad ít dầu mỡ'  ->  ['salad', 'ít', 'dầu_mỡ']
+   d5  [healthy  ] 'món ăn thanh đạm ít béo'  ->  ['món', 'ăn', 'thanh_đạm', 'ít', 'béo']
+   d6  [healthy  ] 'ăn rau củ luộc ít calo'  ->  ['ăn', 'rau', 'củ', 'luộc', 'ít', 'calo']
+   d7  [nhanh_gon] 'bánh mì mang đi nhanh gọn'  ->  ['bánh_mì', 'mang', 'đi', 'nhanh', 'gọn']
+   d8  [nhanh_gon] 'đồ ăn nhanh tiện lợi'  ->  ['đồ', 'ăn', 'nhanh', 'tiện_lợi']
+   d9  [nhanh_gon] 'ăn nhanh kịp giờ học'  ->  ['ăn', 'nhanh', 'kịp', 'giờ', 'học']
+   Kiểm tra token: mọi token ghép (có '_') đều có trong từ điển pyvi -> không có token lạ.
+
+1.3. Từ vựng V (unigram + bigram, sắp theo thứ tự chữ cái), |V| = 59, n = 9
+   STT   Từ / cụm từ         df   idf     
+   0     bánh_mì             1    2.6094  
+   1     bánh_mì mang        1    2.6094  
+   2     béo                 1    2.6094  
+   3     bình_dân            1    2.6094  
+   4     bình_dân giá        1    2.6094  
+   5     calo                1    2.6094  
+   6     cơm                 1    2.6094  
+   7     cơm bình_dân        1    2.6094  
+   8     củ                  1    2.6094  
+   9     củ luộc             1    2.6094  
+   10    dầu_mỡ              1    2.6094  
+   11    giá                 1    2.6094  
+   12    giá rẻ              1    2.6094  
+   13    giờ                 1    2.6094  
+   14    giờ học             1    2.6094  
+   15    gọn                 1    2.6094  
+   16    học                 1    2.6094  
+   17    kịp                 1    2.6094  
+   18    kịp giờ             1    2.6094  
+   19    luộc                1    2.6094  
+   20    luộc ít             1    2.6094  
+   21    mang                1    2.6094  
+   22    mang đi             1    2.6094  
+   23    món                 2    2.2040  
+   24    món nào             1    2.6094  
+   25    món ăn              1    2.6094  
+   26    nhanh               3    1.9163  
+   27    nhanh gọn           1    2.6094  
+   28    nhanh kịp           1    2.6094  
+   29    nhanh tiện_lợi      1    2.6094  
+   30    nào                 1    2.6094  
+   31    nào rẻ              1    2.6094  
+   32    quán                1    2.6094  
+   33    quán ăn             1    2.6094  
+   34    rau                 1    2.6094  
+   35    rau củ              1    2.6094  
+   36    rẻ                  3    1.9163  
+   37    rẻ sinh_viên        1    2.6094  
+   38    rẻ tiết_kiệm        1    2.6094  
+   39    salad               1    2.6094  
+   40    salad ít            1    2.6094  
+   41    sinh_viên           1    2.6094  
+   42    thanh_đạm           1    2.6094  
+   43    thanh_đạm ít        1    2.6094  
+   44    tiết_kiệm           1    2.6094  
+   45    tiện_lợi            1    2.6094  
+   46    ít                  3    1.9163  
+   47    ít béo              1    2.6094  
+   48    ít calo             1    2.6094  
+   49    ít dầu_mỡ           1    2.6094  
+   50    ăn                  5    1.5108  
+   51    ăn nhanh            2    2.2040  
+   52    ăn rau              1    2.6094  
+   53    ăn rẻ               1    2.6094  
+   54    ăn thanh_đạm        1    2.6094  
+   55    đi                  1    2.6094  
+   56    đi nhanh            1    2.6094  
+   57    đồ                  1    2.6094  
+   58    đồ ăn               1    2.6094  
+
+1.4. Ma trận TF-IDF (chỉ liệt kê các ô khác 0) – từng văn bản
+   d1 [tiet_kiem]  ||w||₂ = 6.6729
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      bình_dân            1    1.0000   2.6094   2.6094      0.3911    
+      bình_dân giá        1    1.0000   2.6094   2.6094      0.3911    
+      cơm                 1    1.0000   2.6094   2.6094      0.3911    
+      cơm bình_dân        1    1.0000   2.6094   2.6094      0.3911    
+      giá                 1    1.0000   2.6094   2.6094      0.3911    
+      giá rẻ              1    1.0000   2.6094   2.6094      0.3911    
+      rẻ                  1    1.0000   1.9163   1.9163      0.2872    
+   d2 [tiet_kiem]  ||w||₂ = 6.5250
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      món                 1    1.0000   2.2040   2.2040      0.3378    
+      món nào             1    1.0000   2.6094   2.6094      0.3999    
+      nào                 1    1.0000   2.6094   2.6094      0.3999    
+      nào rẻ              1    1.0000   2.6094   2.6094      0.3999    
+      rẻ                  1    1.0000   1.9163   1.9163      0.2937    
+      rẻ tiết_kiệm        1    1.0000   2.6094   2.6094      0.3999    
+      tiết_kiệm           1    1.0000   2.6094   2.6094      0.3999    
+   d3 [tiet_kiem]  ||w||₂ = 6.3246
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      quán                1    1.0000   2.6094   2.6094      0.4126    
+      quán ăn             1    1.0000   2.6094   2.6094      0.4126    
+      rẻ                  1    1.0000   1.9163   1.9163      0.3030    
+      rẻ sinh_viên        1    1.0000   2.6094   2.6094      0.4126    
+      sinh_viên           1    1.0000   2.6094   2.6094      0.4126    
+      ăn                  1    1.0000   1.5108   1.5108      0.2389    
+      ăn rẻ               1    1.0000   2.6094   2.6094      0.4126    
+   d4 [healthy]  ||w||₂ = 5.5596
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      dầu_mỡ              1    1.0000   2.6094   2.6094      0.4694    
+      salad               1    1.0000   2.6094   2.6094      0.4694    
+      salad ít            1    1.0000   2.6094   2.6094      0.4694    
+      ít                  1    1.0000   1.9163   1.9163      0.3447    
+      ít dầu_mỡ           1    1.0000   2.6094   2.6094      0.4694    
+   d5 [healthy]  ||w||₂ = 7.1880
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      béo                 1    1.0000   2.6094   2.6094      0.3630    
+      món                 1    1.0000   2.2040   2.2040      0.3066    
+      món ăn              1    1.0000   2.6094   2.6094      0.3630    
+      thanh_đạm           1    1.0000   2.6094   2.6094      0.3630    
+      thanh_đạm ít        1    1.0000   2.6094   2.6094      0.3630    
+      ít                  1    1.0000   1.9163   1.9163      0.2666    
+      ít béo              1    1.0000   2.6094   2.6094      0.3630    
+      ăn                  1    1.0000   1.5108   1.5108      0.2102    
+      ăn thanh_đạm        1    1.0000   2.6094   2.6094      0.3630    
+   d6 [healthy]  ||w||₂ = 8.1998
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      calo                1    1.0000   2.6094   2.6094      0.3182    
+      củ                  1    1.0000   2.6094   2.6094      0.3182    
+      củ luộc             1    1.0000   2.6094   2.6094      0.3182    
+      luộc                1    1.0000   2.6094   2.6094      0.3182    
+      luộc ít             1    1.0000   2.6094   2.6094      0.3182    
+      rau                 1    1.0000   2.6094   2.6094      0.3182    
+      rau củ              1    1.0000   2.6094   2.6094      0.3182    
+      ít                  1    1.0000   1.9163   1.9163      0.2337    
+      ít calo             1    1.0000   2.6094   2.6094      0.3182    
+      ăn                  1    1.0000   1.5108   1.5108      0.1843    
+      ăn rau              1    1.0000   2.6094   2.6094      0.3182    
+   d7 [nhanh_gon]  ||w||₂ = 7.6253
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      bánh_mì             1    1.0000   2.6094   2.6094      0.3422    
+      bánh_mì mang        1    1.0000   2.6094   2.6094      0.3422    
+      gọn                 1    1.0000   2.6094   2.6094      0.3422    
+      mang                1    1.0000   2.6094   2.6094      0.3422    
+      mang đi             1    1.0000   2.6094   2.6094      0.3422    
+      nhanh               1    1.0000   1.9163   1.9163      0.2513    
+      nhanh gọn           1    1.0000   2.6094   2.6094      0.3422    
+      đi                  1    1.0000   2.6094   2.6094      0.3422    
+      đi nhanh            1    1.0000   2.6094   2.6094      0.3422    
+   d8 [nhanh_gon]  ||w||₂ = 6.1684
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      nhanh               1    1.0000   1.9163   1.9163      0.3107    
+      nhanh tiện_lợi      1    1.0000   2.6094   2.6094      0.4230    
+      tiện_lợi            1    1.0000   2.6094   2.6094      0.4230    
+      ăn                  1    1.0000   1.5108   1.5108      0.2449    
+      ăn nhanh            1    1.0000   2.2040   2.2040      0.3573    
+      đồ                  1    1.0000   2.6094   2.6094      0.4230    
+      đồ ăn               1    1.0000   2.6094   2.6094      0.4230    
+   d9 [nhanh_gon]  ||w||₂ = 7.1880
+      Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+      giờ                 1    1.0000   2.6094   2.6094      0.3630    
+      giờ học             1    1.0000   2.6094   2.6094      0.3630    
+      học                 1    1.0000   2.6094   2.6094      0.3630    
+      kịp                 1    1.0000   2.6094   2.6094      0.3630    
+      kịp giờ             1    1.0000   2.6094   2.6094      0.3630    
+      nhanh               1    1.0000   1.9163   1.9163      0.2666    
+      nhanh kịp           1    1.0000   2.6094   2.6094      0.3630    
+      ăn                  1    1.0000   1.5108   1.5108      0.2102    
+      ăn nhanh            1    1.0000   2.2040   2.2040      0.3066    
+
+1.5. Xác suất tiên nghiệm P(C) = n_C / n
+   P(healthy  ) = 3/9 = 0.3333     ln P = -1.0986
+   P(nhanh_gon) = 3/9 = 0.3333     ln P = -1.0986
+   P(tiet_kiem) = 3/9 = 0.3333     ln P = -1.0986
+
+1.6. Tổng trọng số N(C,t) = Σ x_t(d) theo lớp (liệt kê các từ có N > 0; còn lại N = 0)
+   Từ / cụm từ         healthy     nhanh_gon   tiet_kiem 
+   bánh_mì             0.0000      0.3422      0.0000    
+   bánh_mì mang        0.0000      0.3422      0.0000    
+   béo                 0.3630      0.0000      0.0000    
+   bình_dân            0.0000      0.0000      0.3911    
+   bình_dân giá        0.0000      0.0000      0.3911    
+   calo                0.3182      0.0000      0.0000    
+   cơm                 0.0000      0.0000      0.3911    
+   cơm bình_dân        0.0000      0.0000      0.3911    
+   củ                  0.3182      0.0000      0.0000    
+   củ luộc             0.3182      0.0000      0.0000    
+   dầu_mỡ              0.4694      0.0000      0.0000    
+   giá                 0.0000      0.0000      0.3911    
+   giá rẻ              0.0000      0.0000      0.3911    
+   giờ                 0.0000      0.3630      0.0000    
+   giờ học             0.0000      0.3630      0.0000    
+   gọn                 0.0000      0.3422      0.0000    
+   học                 0.0000      0.3630      0.0000    
+   kịp                 0.0000      0.3630      0.0000    
+   kịp giờ             0.0000      0.3630      0.0000    
+   luộc                0.3182      0.0000      0.0000    
+   luộc ít             0.3182      0.0000      0.0000    
+   mang                0.0000      0.3422      0.0000    
+   mang đi             0.0000      0.3422      0.0000    
+   món                 0.3066      0.0000      0.3378    
+   món nào             0.0000      0.0000      0.3999    
+   món ăn              0.3630      0.0000      0.0000    
+   nhanh               0.0000      0.8286      0.0000    
+   nhanh gọn           0.0000      0.3422      0.0000    
+   nhanh kịp           0.0000      0.3630      0.0000    
+   nhanh tiện_lợi      0.0000      0.4230      0.0000    
+   nào                 0.0000      0.0000      0.3999    
+   nào rẻ              0.0000      0.0000      0.3999    
+   quán                0.0000      0.0000      0.4126    
+   quán ăn             0.0000      0.0000      0.4126    
+   rau                 0.3182      0.0000      0.0000    
+   rau củ              0.3182      0.0000      0.0000    
+   rẻ                  0.0000      0.0000      0.8839    
+   rẻ sinh_viên        0.0000      0.0000      0.4126    
+   rẻ tiết_kiệm        0.0000      0.0000      0.3999    
+   salad               0.4694      0.0000      0.0000    
+   salad ít            0.4694      0.0000      0.0000    
+   sinh_viên           0.0000      0.0000      0.4126    
+   thanh_đạm           0.3630      0.0000      0.0000    
+   thanh_đạm ít        0.3630      0.0000      0.0000    
+   tiết_kiệm           0.0000      0.0000      0.3999    
+   tiện_lợi            0.0000      0.4230      0.0000    
+   ít                  0.8450      0.0000      0.0000    
+   ít béo              0.3630      0.0000      0.0000    
+   ít calo             0.3182      0.0000      0.0000    
+   ít dầu_mỡ           0.4694      0.0000      0.0000    
+   ăn                  0.3944      0.4551      0.2389    
+   ăn nhanh            0.0000      0.6639      0.0000    
+   ăn rau              0.3182      0.0000      0.0000    
+   ăn rẻ               0.0000      0.0000      0.4126    
+   ăn thanh_đạm        0.3630      0.0000      0.0000    
+   đi                  0.0000      0.3422      0.0000    
+   đi nhanh            0.0000      0.3422      0.0000    
+   đồ                  0.0000      0.4230      0.0000    
+   đồ ăn               0.0000      0.4230      0.0000    
+   N(C) = Σ_t N(C,t)   8.4657      8.5556      7.8693    
+   Mẫu số làm mịn: N(C) + alpha·|V| = N(C) + 0.5×59 = N(C) + 29.5
+     healthy  : 8.4657 + 29.5 = 37.9657
+     nhanh_gon: 8.5556 + 29.5 = 38.0556
+     tiet_kiem: 7.8693 + 29.5 = 37.3693
+
+1.7. Câu thử: 'tìm quán cơm giá rẻ'  (không trùng câu nào trong 9 câu mẫu)
+   preprocess() -> tokens_no_stopwords = ['tìm', 'quán', 'cơm', 'giá', 'rẻ']
+   Chuỗi đưa vào vectorizer = 'tìm quán cơm giá rẻ'
+   Các n-gram của câu: ['tìm', 'quán', 'cơm', 'giá', 'rẻ', 'tìm quán', 'quán cơm', 'cơm giá', 'giá rẻ']
+   Không có trong V (bị bỏ qua): ['tìm', 'tìm quán', 'quán cơm', 'cơm giá']
+   Có trong V: ['quán', 'cơm', 'giá', 'rẻ', 'giá rẻ']
+   ||w||₂ = 5.5596
+   Từ / cụm từ         tf   tf'      idf      w=tf'×idf   x=w/||w|| 
+   cơm                 1    1.0000   2.6094   2.6094      0.4694    
+   giá                 1    1.0000   2.6094   2.6094      0.4694    
+   giá rẻ              1    1.0000   2.6094   2.6094      0.4694    
+   quán                1    1.0000   2.6094   2.6094      0.4694    
+   rẻ                  1    1.0000   1.9163   1.9163      0.3447    
+
+1.8. Likelihood có làm mịn cho các từ của câu thử:  P(t|C) = (N(C,t) + alpha) / (N(C) + alpha·|V|)
+   Từ / cụm từ         Lớp         N(C,t)+alpha   Mẫu số     P(t|C)     ln P(t|C) 
+   cơm                 healthy     0.5000         37.9657    0.0132     -4.3298   
+   cơm                 nhanh_gon   0.5000         38.0556    0.0131     -4.3322   
+   cơm                 tiet_kiem   0.8911         37.3693    0.0238     -3.7362   
+   giá                 healthy     0.5000         37.9657    0.0132     -4.3298   
+   giá                 nhanh_gon   0.5000         38.0556    0.0131     -4.3322   
+   giá                 tiet_kiem   0.8911         37.3693    0.0238     -3.7362   
+   giá rẻ              healthy     0.5000         37.9657    0.0132     -4.3298   
+   giá rẻ              nhanh_gon   0.5000         38.0556    0.0131     -4.3322   
+   giá rẻ              tiet_kiem   0.8911         37.3693    0.0238     -3.7362   
+   quán                healthy     0.5000         37.9657    0.0132     -4.3298   
+   quán                nhanh_gon   0.5000         38.0556    0.0131     -4.3322   
+   quán                tiet_kiem   0.9126         37.3693    0.0244     -3.7123   
+   rẻ                  healthy     0.5000         37.9657    0.0132     -4.3298   
+   rẻ                  nhanh_gon   0.5000         38.0556    0.0131     -4.3322   
+   rẻ                  tiet_kiem   1.3839         37.3693    0.0370     -3.2960   
+
+1.9. Điểm log-posterior chưa chuẩn hóa:  S(C) = ln P(C) + Σ_t x_t · ln P(t|C)
+   S(healthy  ) = (-1.0986) + 0.4694×(-4.3298) + 0.4694×(-4.3298) + 0.4694×(-4.3298) + 0.4694×(-4.3298) + 0.3447×(-4.3298)
+              = -10.7200
+   S(nhanh_gon) = (-1.0986) + 0.4694×(-4.3322) + 0.4694×(-4.3322) + 0.4694×(-4.3322) + 0.4694×(-4.3322) + 0.3447×(-4.3322)
+              = -10.7253
+   S(tiet_kiem) = (-1.0986) + 0.4694×(-3.7362) + 0.4694×(-3.7362) + 0.4694×(-3.7362) + 0.4694×(-3.7123) + 0.3447×(-3.2960)
+              = -9.2380
+
+   Chuẩn hóa softmax:  P(C|x) = exp(S(C) − S_max) / Σ_C' exp(S(C') − S_max),   S_max = -9.2380
+   exp(S(healthy) − S_max) = 0.2272
+   exp(S(nhanh_gon) − S_max) = 0.2260
+   exp(S(tiet_kiem) − S_max) = 1.0000
+   Tổng = 1.4531
+   P(healthy   | x) = 0.1563  (15.63%)
+   P(nhanh_gon | x) = 0.1555  (15.55%)
+   P(tiet_kiem | x) = 0.6882  (68.82%)
+
+   ===> DỰ ĐOÁN: 'tiet_kiem' với xác suất 68.82% (≥ 50%).
+
+1.10. Đối chiếu với sklearn (assert sai số < 1e-6)
+   predict_proba sklearn : {'healthy': 0.156329, 'nhanh_gon': 0.15551, 'tiet_kiem': 0.688161}
+   Tính tay              : {'healthy': 0.156329, 'nhanh_gon': 0.15551, 'tiet_kiem': 0.688161}
+   Sai số lớn nhất = 7.77e-16   (từ vựng, idf, ma trận TF-IDF, ln P(C), ln P(t|C) cũng khớp < 1e-9)
+   NeedClassifier.predict() của ứng dụng trả về nhãn 'tiet_kiem' -> trùng với tính tay.
+
+====================================================================================================
+PHẦN 2. CHẤM ĐIỂM VÀ XẾP HẠNG MÓN ĂN THEO NHÓM NHU CẦU
+====================================================================================================
+2.1. Nhóm nhu cầu = nhãn dự đoán ở Phần 1: 'tiet_kiem'. Trọng số THẬT đọc từ config/profiles.json:
+   w_gia          = 0.35   (Giá (đ))
+   w_khoang_cach  = 0.15   (Khoảng cách (m))
+   w_thoi_gian    = 0.10   (Thời gian (phút))
+   w_do_no        = 0.20   (Độ no)
+   w_dinh_duong   = 0.10   (Dinh dưỡng)
+   w_do_ngon      = 0.10   (Độ ngon)
+   Tổng trọng số = 1.00
+
+2.2. Bốn món lấy từ data/dishes.csv (dùng đủ 6 tiêu chí)
+   Món                                                       Giá (đ)            Khoảng cách (m)    Thời gian (phút)   Độ no     Dinh dưỡng   Độ ngon 
+   [1] Cơm bình dân tự chọn ngõ Tự Do                        25000              150                5                  4         3            3       
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU                     40000              150                8                  4         3            5       
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          45000              350                8                  4         4            4       
+   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         45000              300                8                  3         2            4       
+
+2.3. Chuẩn hóa min-max trong 4 món (đảo chiều cho tiêu chí chi phí)
+   Chi phí (giá, khoảng cách, thời gian): v = (max − x) / (max − min)
+   Lợi ích (độ no, dinh dưỡng, độ ngon) : v = (x − min) / (max − min)
+   Tiêu chí            min       max       max−min   Loại      
+   Giá (đ)             25000     45000     20000     chi phí   
+   Khoảng cách (m)     150       350       200       chi phí   
+   Thời gian (phút)    5         8         3         chi phí   
+   Độ no               3         4         1         lợi ích   
+   Dinh dưỡng          2         4         2         lợi ích   
+   Độ ngon             3         5         2         lợi ích   
+
+   Giá trị chuẩn hóa v:
+   Món                                                       Giá (đ)            Khoảng cách (m)    Thời gian (phút)   Độ no     Dinh dưỡng   Độ ngon 
+   [1] Cơm bình dân tự chọn ngõ Tự Do                        1.0000             1.0000             1.0000             1.0000    0.5000       0.0000  
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU                     0.2500             1.0000             0.0000             1.0000    0.5000       1.0000  
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          0.0000             0.0000             0.0000             1.0000    1.0000       0.5000  
+   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         0.0000             0.2500             0.0000             0.0000    0.0000       0.5000  
+
+2.4. Đóng góp w × v của từng tiêu chí (4 chữ số thập phân) và điểm tổng  Điểm = Σ w×v
+   Món                                                       Giá (đ)            Khoảng cách (m)    Thời gian (phút)   Độ no     Dinh dưỡng   Độ ngon   Σ = Điểm 
+   [1] Cơm bình dân tự chọn ngõ Tự Do                        0.3500             0.1500             0.1000             0.2000    0.0500       0.0000    0.8500   
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU                     0.0875             0.1500             0.0000             0.2000    0.0500       0.1000    0.5875   
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          0.0000             0.0000             0.0000             0.2000    0.1000       0.0500    0.3500   
+   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         0.0000             0.0375             0.0000             0.0000    0.0000       0.0500    0.0875   
+
+   Kiểm tra cộng từng món:
+   [1] Cơm bình dân tự chọn ngõ Tự Do           : 0.3500 + 0.1500 + 0.1000 + 0.2000 + 0.0500 + 0.0000 = 0.8500  (điểm 0.8500)
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU        : 0.0875 + 0.1500 + 0.0000 + 0.2000 + 0.0500 + 0.1000 = 0.5875  (điểm 0.5875)
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Ng: 0.0000 + 0.0000 + 0.0000 + 0.2000 + 0.1000 + 0.0500 = 0.3500  (điểm 0.3500)
+   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại N: 0.0000 + 0.0375 + 0.0000 + 0.0000 + 0.0000 + 0.0500 = 0.0875  (điểm 0.0875)
+
+2.5. Bảng xếp hạng
+   #1  [1] Cơm bình dân tự chọn ngõ Tự Do                        điểm = 0.8500
+   #2  [12] Bún đậu mắm tôm thập cẩm KTX NEU                     điểm = 0.5875
+   #3  [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          điểm = 0.3500
+   #4  [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         điểm = 0.0875
+
+2.6. Đối chiếu (assert sai số < 1e-6)
+   MinMaxScaler của sklearn (đảo chiều cột chi phí) × trọng số: sai số điểm lớn nhất = 1.11e-16, cùng thứ hạng.
+   DishRecommender của dự án (4 món trên): sai số điểm lớn nhất = 1.11e-16, cùng thứ hạng.
+
+====================================================================================================
+3. KẾT LUẬN KIỂM CHỨNG
+   Phần 1: từ vựng, idf, ma trận TF-IDF, prior, likelihood, predict_proba (sai số 7.77e-16) khớp sklearn.
+   Phần 2: điểm và xếp hạng (sai số 1.11e-16) khớp sklearn và DishRecommender.
+   ĐÃ KHỚP VỚI SKLEARN
+====================================================================================================

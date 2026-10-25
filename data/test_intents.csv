@@ -1,0 +1,65 @@
+text,label
+Bữa trưa chi phí thấp tầm 25 nghìn quanh trường,tiet_kiem
+"Tài chính có hạn dưới 30k, trưa nay ăn gì ở NEU",tiet_kiem
+an gi sieu re tam 20k-25k ktx neu,tiet_kiem
+Có quán bún nào dưới 35k không cay ở Giải Phóng không,tiet_kiem
+Tìm chỗ ăn cơm bình dân rẻ nhất quanh Tạ Quang Bửu,tiet_kiem
+sinh vien cuoi thang vi con 30k an gi,tiet_kiem
+"Trưa nay cần tiết kiệm tối đa, trừ các món trên 40k",tiet_kiem
+Gợi ý đồ ăn trưa vừa rẻ vừa sạch cho sinh viên khó khăn,tiet_kiem
+Cần tìm món trưa ít calo nhiều xơ gần giảng đường NEU,healthy
+Trưa nay ăn gì healthy không dính dầu mỡ tầm dưới 50k,healthy
+tim quan ban do an chay hoac salad quanh neu,healthy
+Món nào cho người tập gym giữ cơ quanh phố Vọng,healthy
+muon an com gao lut uc ga it calo,healthy
+Ăn trưa thanh đạm giải nhiệt mùa hè không chiên rán,healthy
+gợi ý đồ ăn trưa Eat Clean tốt cho sức khỏe dưới 60k,healthy
+co mon nao it tinh bot va khong cay k bot,healthy
+Cần ăn trong 10 phút để kịp ca thi lúc 13h,nhanh_gon
+Quán nào gần NEU dưới 150m vào là có đồ ăn ngay,nhanh_gon
+an nhanh mot chiec banh mi roi vao hoc,nhanh_gon
+"Trưa nay vội quá, tìm món mang đi siêu tốc không phải chờ",nhanh_gon
+do an nhanh takeaway quanh ngo tu do,nhanh_gon
+Có quán nào bán đồ ăn trưa cấp tốc dưới 5 phút không,nhanh_gon
+muon mua com hop mang di nhanh gon duoi 35k,nhanh_gon
+Ăn gì thật nhanh tiện đường sang giảng đường A,nhanh_gon
+Muốn ăn một bữa thật đẫy đà để no cả buổi chiều,no_bung
+Quán cơm nào suất siêu to khổng lồ nhiều cơm thịt quanh đây,no_bung
+"an gi cho no cang bung, vi toi phai hoc den khuya",no_bung
+Tìm bát phở hoặc bún to gấp rưỡi bình thường gần NEU,no_bung
+suat com tam day ap suon cha de no lau,no_bung
+"Bụng đói meo rồi, có quán nào nhiều tinh bột và đạm no căng không",no_bung
+an com goi them 2 bat com k tinh tien o dau,no_bung
+Gợi ý suất cơm bình dân đĩa lớn ăn no nê dưới 45k,no_bung
+"Hôm nay chán ăn cơm quán rồi, muốn thử món gì độc lạ",ngon_doi_gio
+Quán nào ăn ngon nức tiếng quanh NEU để đãi bạn,ngon_doi_gio
+doi vi sang mi cay hoac do han nong hoi di,ngon_doi_gio
+Trưa nay muốn ăn món gì thật đậm đà cay nồng đổi gió,ngon_doi_gio
+tim mon la mieng doi khau vi quanh Ta Quang Buu,ngon_doi_gio
+Thèm một món gì thật ngon và khác biệt cho bữa trưa nay,ngon_doi_gio
+goi y quan com nieu hay lau mini doi gio,ngon_doi_gio
+Có món đặc sản vùng miền nào ngon đỉnh quanh khu Bách Kinh Xây không,ngon_doi_gio
+Tư vấn một suất ăn trưa hài hòa dinh dưỡng giá 35k,can_bang
+Món nào vừa túi tiền sinh viên mà chất lượng ổn áp,can_bang
+tim quan com bua trua can doi k qua xa k qua dat,can_bang
+"Trưa nay muốn ăn món vừa đủ no, đủ rau và thịt quanh NEU",can_bang
+bua trua tieu chuan khong qua nhieu mo tam 40k,can_bang
+Gợi ý bữa cơm sinh viên cân đối các tiêu chí trưa nay,can_bang
+an gi vua ngon mieng vua hop gia tien quanh Le Thanh Nghi,can_bang
+Quán ăn trưa ổn thỏa về khoảng cách và mức giá cho sinh viên,can_bang
+Chào buổi trưa bạn bot ẩm thực,chao_hoi
+"Hi bot, mình đang đói bụng quá đây",chao_hoi
+chao em bot de thuong,chao_hoi
+"Hello, có gợi ý món trưa nào không bạn",chao_hoi
+alo chatbot NEU oi,chao_hoi
+"Chào bạn, tư vấn trưa nay ăn gì giúp mình nhé",chao_hoi
+helo bot an trua,chao_hoi
+"Xin chào, rất vui được gặp bot",chao_hoi
+Cảm ơn bot đã tư vấn nhiệt tình nha,cam_on_tam_biet
+"Mình đi ăn đây, tạm biệt chatbot nhé",cam_on_tam_biet
+"thanks bot rat nhieu, mon goi y rat hop y",cam_on_tam_biet
+"Oki cảm ơn bạn nhiều nghen, bái bai",cam_on_tam_biet
+"tam biet bot nhe, hen mai minh lai hoi",cam_on_tam_biet
+"Thông tin rất hữu ích, cảm ơn bạn nhiều",cam_on_tam_biet
+"bye bye bot nha, chuc buoi trua ngon mieng",cam_on_tam_biet
+"Cảm ơn bot, mình quyết định đi ăn bún chả đây",cam_on_tam_biet

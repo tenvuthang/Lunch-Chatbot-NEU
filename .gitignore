@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches and test artifacts
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE and Editor configuration
+.idea/
+.vscode/
+
+# Compressed archives
+*.rar
+*.zip
+*.7z
+*.tar.gz
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Explicitly ensure required project assets are tracked
+!data/
+!data/*.csv
+!config/
+!config/*.json
+!outputs/
+!outputs/*.png
+!outputs/*.csv
+!outputs/*.txt
+!outputs/.gitkeep
+!outputs/classifier_model.joblib

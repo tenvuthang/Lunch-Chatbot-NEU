@@ -1,0 +1,10 @@
+﻿Câu kiểm thử (Text),Nhãn thực tế (True Label),Tên nhãn thực tế,Nhãn dự đoán (Pred Label),Tên nhãn dự đoán,Xác suất dự đoán sai,Xác suất của nhãn đúng
+Bữa trưa chi phí thấp tầm 25 nghìn quanh trường,tiet_kiem,Tiết kiệm,can_bang,Cân bằng,0.2755,0.1545
+Gợi ý đồ ăn trưa vừa rẻ vừa sạch cho sinh viên khó khăn,tiet_kiem,Tiết kiệm,can_bang,Cân bằng,0.2619,0.212
+co mon nao it tinh bot va khong cay k bot,healthy,Healthy,ngon_doi_gio,Đổi gió,0.2203,0.1672
+Tìm bát phở hoặc bún to gấp rưỡi bình thường gần NEU,no_bung,No bụng,healthy,Healthy,0.2046,0.1581
+Quán nào ăn ngon nức tiếng quanh NEU để đãi bạn,ngon_doi_gio,Đổi gió,tiet_kiem,Tiết kiệm,0.2471,0.161
+"Trưa nay muốn ăn món vừa đủ no, đủ rau và thịt quanh NEU",can_bang,Cân bằng,healthy,Healthy,0.2331,0.1921
+Quán ăn trưa ổn thỏa về khoảng cách và mức giá cho sinh viên,can_bang,Cân bằng,tiet_kiem,Tiết kiệm,0.3253,0.2756
+"Hello, có gợi ý món trưa nào không bạn",chao_hoi,Chào hỏi,healthy,Healthy,0.2094,0.1513
+helo bot an trua,chao_hoi,Chào hỏi,nhanh_gon,Nhanh gọn,0.212,0.0796
