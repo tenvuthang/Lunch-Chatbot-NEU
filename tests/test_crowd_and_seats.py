@@ -144,7 +144,7 @@ def test_infer_time_slot_rules():
 def test_so_nguoi_1_ranking_compatibility_and_group_effect():
     """
     Khi so_nguoi = 1:
-    - Ở khung giờ bình thường và vắng, 100% (50/50) món ăn trong dishes_v2.csv có cho_trong >= 1
+    - Ở khung giờ bình thường và vắng, 100% (50/50) món ăn trong dishes.csv có cho_trong >= 1
       nên cho_ngoi_nhom = 1.0 bằng nhau tuyệt đối cho mọi món (chuẩn hóa cho_ngoi = 1.0 đồng nhất).
     - Ở khung giờ cao điểm, >= 96% (48/50) món có cho_ngoi_nhom = 1.0.
     Khi tăng lên so_nguoi = 6 ở giờ cao điểm:

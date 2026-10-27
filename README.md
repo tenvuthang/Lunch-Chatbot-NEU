@@ -30,7 +30,7 @@
    - Tích hợp 4 biểu đồ trực quan Matplotlib: đóng góp 7 tiêu chí xếp chồng, phân phối xác suất ý định, đường biểu diễn thời gian chờ ước tính theo số người (1–10), và biểu đồ so sánh chỗ trống với quy mô nhóm.
 
 5. **Quản lý dữ liệu tương tác (Data Management)**:
-   - Tab **🗂️ Quản lý dữ liệu**: Hỗ trợ xem, tìm kiếm, thêm, sửa, xóa món ăn trong `data/dishes_v2.csv` (đầy đủ 15 cột, bao gồm `do_dong_cao_diem`, `so_cho_ngoi`, `nguon_du_lieu`) kèm kiểm tra tính hợp lệ nghiêm ngặt.
+   - Tab **🗂️ Quản lý dữ liệu**: Hỗ trợ xem, tìm kiếm, thêm, sửa, xóa món ăn trong `data/dishes.csv` (đầy đủ 15 cột, bao gồm `do_dong_cao_diem`, `so_cho_ngoi`, `nguon_du_lieu`) kèm kiểm tra tính hợp lệ nghiêm ngặt.
    - Thêm câu mẫu mới vào `data/intents.csv` theo từng nhãn ý định.
    - Nút **Huấn luyện lại mô hình** ngay trên giao diện chạy qua luồng ngầm (`QThread`), cập nhật mô hình tức thì mà không gây đơ ứng dụng.
 
@@ -46,8 +46,7 @@ lunch_chatbot/
 │   ├── crowd_config.json           # Cấu hình tính toán mức độ đông đúc, giờ cao điểm và hệ số chiếm chỗ ngồi
 │   └── profiles.json               # Cấu hình trọng số 7 tiêu chí (thêm chỗ ngồi) cho các nhóm nhu cầu
 ├── data/
-│   ├── dishes.csv                  # Dữ liệu món ăn phiên bản 1 (45 món, 12 cột - tương thích ngược)
-│   ├── dishes_v2.csv               # Dữ liệu món ăn mặc định của hệ thống (50 món, 15 cột: thêm độ đông, chỗ ngồi)
+│   ├── dishes.csv                  # Dữ liệu món ăn mặc định của hệ thống (50 món, 15 cột: có độ đông, chỗ ngồi)
 │   ├── feedback.csv                # Lưu phản hồi 👍/👎 của người dùng về gợi ý của bot (tự tạo khi có phản hồi)
 │   ├── intents.csv                 # Dữ liệu huấn luyện ý định (8 nhãn, 304 mẫu)
 │   ├── test_intents.csv            # Dữ liệu kiểm thử độc lập (8 nhãn, 64 mẫu)
@@ -99,8 +98,8 @@ lunch_chatbot/
 │   ├── test_recommender.py         # Kiểm thử thuật toán chuẩn hóa và xếp hạng gợi ý
 │   └── test_worked_example.py      # Kiểm thử sinh số liệu tính tay đối chiếu sklearn
 ├── tools/
-│   ├── check_dishes.py             # Công cụ xác thực và thống kê dữ liệu dishes_v2.csv
-│   └── migrate_dishes.py           # Script di chuyển dữ liệu v1 sang v2 và sinh độ đông/chỗ ngồi
+│   ├── check_dishes.py             # Công cụ xác thực và thống kê dữ liệu dishes.csv
+│   └── migrate_dishes.py           # Script di chuyển dữ liệu v1 sang dishes.csv và sinh độ đông/chỗ ngồi
 ├── .gitignore                      # Cấu hình bỏ qua tệp tạm, môi trường ảo và tệp nén
 ├── HUONG_DAN_SU_DUNG.md            # Sổ tay hướng dẫn chi tiết dành cho người dùng non-tech
 ├── main.py                         # Điểm vào chính hỗ trợ CLI, GUI, kiểm tra dữ liệu, đánh giá
@@ -167,7 +166,7 @@ python main.py "tìm quán cơm bình dân ngõ Tự Do giá dưới 35k không 
 ```
 
 ### 4. Kiểm tra tính hợp lệ của dữ liệu (Data Integrity Check)
-Xác thực cấu hình `profiles.json` (7 tiêu chí), `crowd_config.json`, tập mẫu `intents.csv`, `test_intents.csv` và in thống kê chi tiết `dishes_v2.csv`:
+Xác thực cấu hình `profiles.json` (7 tiêu chí), `crowd_config.json`, tập mẫu `intents.csv`, `test_intents.csv` và in thống kê chi tiết `dishes.csv`:
 ```bash
 python main.py --check
 ```
@@ -213,7 +212,7 @@ c_{\mathrm{hd}} = c_0 \cdot k_{\mathrm{tg}}
 | Ký hiệu | Ý nghĩa | Tên trong code / cấu hình |
 | :--- | :--- | :--- |
 | $c_{\mathrm{hd}}$ | Mức độ đông đúc thực tế sau khi nhân hệ số thời điểm | `do_dong_hieu_dung` trong `src/recommender.py` |
-| $c_0$ | Mức độ đông cơ sở vào giờ cao điểm trưa (thang đo 1 – 5) | `do_dong_cao_diem` trong `data/dishes_v2.csv` |
+| $c_0$ | Mức độ đông cơ sở vào giờ cao điểm trưa (thang đo 1 – 5) | `do_dong_cao_diem` trong `data/dishes.csv` |
 | $k_{\mathrm{tg}}$ | Hệ số tải trọng theo khung giờ (0.3, 0.6 hoặc 1.0) | `he_so_khung_gio` trong `config/crowd_config.json` |
 
 Quy đổi mức độ đông hiệu dụng $c_{\mathrm{hd}}$ thành nhãn trực quan trên giao diện:
@@ -232,7 +231,7 @@ t_{\mathrm{cho}} = t_0 \cdot \left(1 + a_{\mathrm{eff}} \cdot \frac{c_{\mathrm{h
 | Ký hiệu | Ý nghĩa | Tên trong code / cấu hình |
 | :--- | :--- | :--- |
 | $t_{\mathrm{cho}}$ | Thời gian chờ phục vụ ước tính thực tế (phút) | `thoi_gian_cho` trong `src/recommender.py` |
-| $t_0$ | Thời gian chế biến và phục vụ cơ bản của quán (phút) | `thoi_gian_phuc_vu_phut` trong `data/dishes_v2.csv` |
+| $t_0$ | Thời gian chế biến và phục vụ cơ bản của quán (phút) | `thoi_gian_phuc_vu_phut` trong `data/dishes.csv` |
 | $c_{\mathrm{hd}}$ | Mức độ đông hiệu dụng của quán tại thời điểm đi ăn | `do_dong_hieu_dung` trong `src/recommender.py` |
 | $a_{\mathrm{eff}}$ | Hệ số tác động của độ đông ($a_{\mathrm{eff}} = 2a$ khi ưu tiên quán vắng, ngược lại $a_{\mathrm{eff}} = a$) | `a_effective` / `a` trong `config/crowd_config.json` |
 | $b$ | Hệ số điều chỉnh trễ theo số người trong nhóm ($b = 0.10$) | `b` trong `config/crowd_config.json` |
@@ -255,7 +254,7 @@ s_{\mathrm{nhom}} = \min\left(1,\; \frac{s_{\mathrm{trong}}}{N}\right)
 | Ký hiệu | Ý nghĩa | Tên trong code / cấu hình |
 | :--- | :--- | :--- |
 | $s_{\mathrm{trong}}$ | Số chỗ ngồi còn trống dự kiến tại quán (ghế) | `cho_trong` trong `src/recommender.py` |
-| $S$ | Tổng quy mô chỗ ngồi của quán (ghế, từ 6 đến 85 chỗ) | `so_cho_ngoi` trong `data/dishes_v2.csv` |
+| $S$ | Tổng quy mô chỗ ngồi của quán (ghế, từ 6 đến 85 chỗ) | `so_cho_ngoi` trong `data/dishes.csv` |
 | $\gamma$ | Hệ số ngưỡng chiếm chỗ tới hạn ($\gamma = 0.90$) | `he_so_chiem_cho` trong `config/crowd_config.json` |
 | $c_{\mathrm{hd}}$ | Mức độ đông hiệu dụng của quán | `do_dong_hieu_dung` trong `src/recommender.py` |
 | $s_{\mathrm{nhom}}$ | Tỷ lệ đáp ứng chỗ ngồi cho nhóm ($0 \leq s_{\mathrm{nhom}} \leq 1$) | `cho_ngoi_nhom` trong `src/recommender.py` |
@@ -302,8 +301,8 @@ Tổng điểm gợi ý của món ăn $i$ được xác định theo phương p
 - **`data/intents.csv`**: Gồm **304 mẫu câu** phân bổ đều cho 8 nhãn ý định (38 mẫu/nhãn). Dữ liệu được biên soạn tự nhiên với cách diễn đạt của sinh viên, bao gồm câu tiếng Việt có dấu, không dấu, câu viết tắt (*"ko cay"*, *"sv"*, *"k"*), câu chứa ràng buộc ngân sách và yêu cầu loại trừ.
 - **`data/test_intents.csv`**: Gồm **64 mẫu câu độc lập** (8 mẫu/nhãn), hoàn toàn không trùng lặp câu nào với tập huấn luyện, dùng để kiểm thử khách quan độ chuẩn xác của mô hình.
 
-### 2. Dữ liệu danh sách món ăn (`data/dishes_v2.csv`)
-Tập dữ liệu mặc định đang dùng trong toàn hệ thống là `data/dishes_v2.csv` (được cấu hình tập trung tại `src/config.py`, đồng thời hỗ trợ đọc tương thích ngược các file thiếu 2 cột mới như `data/dishes.csv` với giá trị mặc định `do_dong_cao_diem=3, so_cho_ngoi=30`). `data/dishes_v2.csv` gồm **50 món ăn** với **15 cột thuộc tính** đầy đủ:
+### 2. Dữ liệu danh sách món ăn (`data/dishes.csv`)
+Tập dữ liệu mặc định đang dùng trong toàn hệ thống là `data/dishes.csv` (được cấu hình tập trung tại `src/config.py`, đồng thời hỗ trợ đọc tương thích ngược các file thiếu 2 cột mới với giá trị mặc định `do_dong_cao_diem=3, so_cho_ngoi=30`). `data/dishes.csv` gồm **50 món ăn** với **15 cột thuộc tính** đầy đủ:
 - `id`: Mã định danh món ăn (1 đến 50).
 - `ten_mon`: Tên món ăn hoặc quán ăn quanh NEU.
 - `loai`: Nhóm món ăn (cơm, bún, phở, bánh mì, mì, xôi, nem nướng, bánh giò, salad, đồ ăn nhanh, khác...).
@@ -326,10 +325,10 @@ Tập dữ liệu mặc định đang dùng trong toàn hệ thống là `data/d
 
 > [!NOTE]
 > **LƯU Ý VỀ DỮ LIỆU MÓN ĂN**:
-> Tập dữ liệu `data/dishes_v2.csv` là **DỮ LIỆU MẪU TỰ BIÊN SOẠN / GIẢ LẬP** phản ánh chân thực môi trường ẩm thực xung quanh Đại học Kinh tế Quốc dân (khu vực ngõ Tự Do, đường Trần Đại Nghĩa, KTX NEU, phố Lê Thanh Nghị, Tạ Quang Bửu, Đại La).  
+> Tập dữ liệu `data/dishes.csv` là **DỮ LIỆU MẪU TỰ BIÊN SOẠN / GIẢ LẬP** phản ánh chân thực môi trường ẩm thực xung quanh Đại học Kinh tế Quốc dân (khu vực ngõ Tự Do, đường Trần Đại Nghĩa, KTX NEU, phố Lê Thanh Nghị, Tạ Quang Bửu, Đại La).  
 > **Cách thay bằng dữ liệu thực tế:**
-> 1. **Cách 1 (Trực quan)**: Khởi chạy giao diện (`python main.py --gui`), chuyển sang tab **🗂️ Quản lý dữ liệu** để thêm, sửa, xóa món ăn trực tiếp (hỗ trợ đầy đủ 15 cột thuộc tính). Dữ liệu sẽ được lưu tự động vào `data/dishes_v2.csv` và hệ thống gợi ý cập nhật ngay lập tức.
-> 2. **Cách 2 (Thủ công)**: Mở file `data/dishes_v2.csv` bằng Excel hoặc trình soạn thảo văn bản, chỉnh sửa hoặc bổ sung thêm các dòng dữ liệu thật theo đúng định dạng 15 cột nêu trên.
+> 1. **Cách 1 (Trực quan)**: Khởi chạy giao diện (`python main.py --gui`), chuyển sang tab **🗂️ Quản lý dữ liệu** để thêm, sửa, xóa món ăn trực tiếp (hỗ trợ đầy đủ 15 cột thuộc tính). Dữ liệu sẽ được lưu tự động vào `data/dishes.csv` và hệ thống gợi ý cập nhật ngay lập tức.
+> 2. **Cách 2 (Thủ công)**: Mở file `data/dishes.csv` bằng Excel hoặc trình soạn thảo văn bản, chỉnh sửa hoặc bổ sung thêm các dòng dữ liệu thật theo đúng định dạng 15 cột nêu trên.
 
 > [!TIP]
 > **Tương thích Microsoft Excel & Mã hóa Tiếng Việt:**

@@ -1,6 +1,6 @@
 """
 Tab "Quản lý dữ liệu" của giao diện PyQt6:
-  (1) Bảng xem/thêm/sửa/xóa món ăn -> lưu vào data/dishes_v2.csv (có kiểm tra hợp lệ 15 cột, gồm
+  (1) Bảng xem/thêm/sửa/xóa món ăn -> lưu vào data/dishes.csv (có kiểm tra hợp lệ 15 cột, gồm
       do_dong_cao_diem 1-5, so_cho_ngoi > 0, nguon_du_lieu ∈ {mô phỏng, quan sát, khảo sát}).
   (2) Form thêm câu mẫu mới vào data/intents.csv với nhãn chọn từ danh sách.
   (3) Nút "Huấn luyện lại" để cập nhật mô hình ngay sau khi sửa dữ liệu.
@@ -50,7 +50,7 @@ class DataManagerTab(QWidget):
         root.setSpacing(10)
 
         # (1) Món ăn
-        grp_dish = QGroupBox("🍽️  Danh sách món ăn (data/dishes_v2.csv)")
+        grp_dish = QGroupBox("🍽️  Danh sách món ăn (data/dishes.csv)")
         dish_lay = QVBoxLayout(grp_dish)
         dish_lay.setContentsMargins(8, 14, 8, 8)
 

@@ -1,5 +1,5 @@
 ================================================================================
-BÁO CÁO THỐNG KÊ DỮ LIỆU MÓN ĂN QUANH ĐH KINH TẾ QUỐC DÂN (data/dishes_v2.csv)
+BÁO CÁO THỐNG KÊ DỮ LIỆU MÓN ĂN QUANH ĐH KINH TẾ QUỐC DÂN (data/dishes.csv)
 ================================================================================
 1. Tổng số món ăn: 50 món
    • Nguồn dữ liệu   : Mô phỏng theo thực tế ẩm thực khu vực NEU (ngõ Tự Do, Trần Đại Nghĩa, KTX, Lê Thanh Nghị...)

@@ -1,5 +1,5 @@
 """
-Module quản lý dữ liệu cho Lunch Chatbot: đọc/ghi/kiểm tra hợp lệ data/dishes_v2.csv và data/intents.csv.
+Module quản lý dữ liệu cho Lunch Chatbot: đọc/ghi/kiểm tra hợp lệ data/dishes.csv và data/intents.csv.
 Tách khỏi giao diện để có thể kiểm thử độc lập. Mọi hàm ghi file đều ghi nguyên tử (file tạm rồi thay thế)
 để tránh hỏng dữ liệu nếu chương trình bị dừng giữa chừng.
 Hỗ trợ tương thích ngược với file CSV cũ thiếu các cột chay, do_dong_cao_diem, so_cho_ngoi, nguon_du_lieu.

@@ -44,7 +44,7 @@ SAMPLE_DOCS: List[Tuple[str, str]] = [
     ("ăn nhanh kịp giờ học", "nhanh_gon"),
 ]
 TEST_QUERY = "tìm quán cơm giá rẻ"
-# 4 món lấy từ data/dishes_v2.csv (giá, khoảng cách, thời gian, độ đông, chỗ ngồi đa dạng)
+# 4 món lấy từ data/dishes.csv (giá, khoảng cách, thời gian, độ đông, chỗ ngồi đa dạng)
 DISH_IDS = [1, 12, 23, 28]
 TOKEN_PATTERN = r"(?u)\b\w\w+\b"  # mặc định của TfidfVectorizer
 CRITERIA = [  # (khóa trong profiles.json, cột giá trị đưa vào chấm điểm, tên hiển thị, là tiêu chí chi phí?)
@@ -202,9 +202,9 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
     weights = profiles[pred_label]
     assert abs(sum(weights.values()) - 1.0) < 1e-9 and set(weights) == {c[0] for c in CRITERIA}
 
-    dishes_v2_path = os.path.join(root_dir, "data", "dishes_v2.csv")
+    dishes_path = os.path.join(root_dir, "data", "dishes.csv")
     crowd_cfg_path = os.path.join(root_dir, "config", "crowd_config.json")
-    with open(dishes_v2_path, "r", encoding="utf-8-sig", newline="") as f:
+    with open(dishes_path, "r", encoding="utf-8-sig", newline="") as f:
         all_dishes = {int(r["id"]): r for r in csv.DictReader(f)}
     dishes = [all_dishes[i] for i in DISH_IDS]
 
@@ -278,7 +278,7 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
     assert diff_score < 1e-6 and list(np.argsort(-sk_totals)) == order, "Điểm/xếp hạng lệch sklearn"
 
     # ── Đối chiếu: DishRecommender thật của dự án cho cả 4 người và 1 người ──
-    rec = DishRecommender(dishes_path=dishes_v2_path, profiles_path=active_profile, crowd_config_path=crowd_cfg_path)
+    rec = DishRecommender(dishes_path=dishes_path, profiles_path=active_profile, crowd_config_path=crowd_cfg_path)
     all_d_rec = {int(d["id"]): d for d in rec.dishes}
     rec.dishes = [all_d_rec[i] for i in DISH_IDS]
 
@@ -410,7 +410,7 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
         P(f"   w_{k:<12} = {weights[k]:.2f}   ({name})")
     P(f"   Tổng trọng số = {sum(weights.values()):.2f}")
 
-    P("\n2.2. Bốn món lấy từ data/dishes_v2.csv (dữ liệu ban đầu)")
+    P("\n2.2. Bốn món lấy từ data/dishes.csv (dữ liệu ban đầu)")
     names = [f"[{d['id']}] {d['ten_mon']}" for d in dishes_4]
     base_headers = ["Món", "Giá (đ)", "K.Cách (m)", "TG PV (phút)", "Độ no", "D.Dưỡng", "Độ ngon", "Độ đông", "Chỗ ngồi"]
     base_widths = [48, 9, 11, 13, 7, 9, 8, 9, 9]

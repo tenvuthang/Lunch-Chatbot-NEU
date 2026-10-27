@@ -483,7 +483,7 @@ class ModelEvaluator:
     # ══════════════════════════════════════════════════════════════════════════
     def export_crowd_analysis(self, output_filename: str = "crowd_analysis.csv") -> str:
         """Xuất bảng tổng hợp phân tích độ đông, thời gian chờ và chỗ trống của 50 món ăn."""
-        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        dishes_path = os.path.join(parent_dir, "data", "dishes.csv")
         crowd_cfg_path = os.path.join(parent_dir, "config", "crowd_config.json")
         df_dishes = read_csv_dataframe(dishes_path)
         with open(crowd_cfg_path, "r", encoding="utf-8") as f:
@@ -532,7 +532,7 @@ class ModelEvaluator:
 
     def plot_crowd_wait_vs_people(self, output_filename: str = "crowd_wait_vs_people.png") -> str:
         """Vẽ biểu đồ thời gian chờ theo số người (1-10) cho 5 món điển hình qua 3 khung giờ."""
-        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        dishes_path = os.path.join(parent_dir, "data", "dishes.csv")
         crowd_cfg_path = os.path.join(parent_dir, "config", "crowd_config.json")
         df_dishes = read_csv_dataframe(dishes_path)
         with open(crowd_cfg_path, "r", encoding="utf-8") as f:
@@ -580,7 +580,7 @@ class ModelEvaluator:
 
     def plot_crowd_ranking_shift(self, output_filename: str = "crowd_ranking_shift.png") -> str:
         """Vẽ biểu đồ thay đổi thứ hạng Top-5 khi thay đổi số người đi ăn (1, 4, 8 người)."""
-        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        dishes_path = os.path.join(parent_dir, "data", "dishes.csv")
         profiles_path = os.path.join(parent_dir, "config", "profiles.json")
         crowd_cfg_path = os.path.join(parent_dir, "config", "crowd_config.json")
 
@@ -637,11 +637,11 @@ class ModelEvaluator:
         return out_path
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 8. THỐNG KÊ TỔNG QUAN DỮ LIỆU dishes_v2.csv (DATA SUMMARY)
+    # 8. THỐNG KÊ TỔNG QUAN DỮ LIỆU dishes.csv (DATA SUMMARY)
     # ══════════════════════════════════════════════════════════════════════════
     def export_data_summary(self, output_filename: str = "data_summary.txt") -> str:
         """Tổng hợp thống kê thuộc tính, phân bố độ đông, chỗ ngồi và xuất file data_summary.txt."""
-        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        dishes_path = os.path.join(parent_dir, "data", "dishes.csv")
         df = read_csv_dataframe(dishes_path)
 
         total_dishes = len(df)
@@ -669,7 +669,7 @@ class ModelEvaluator:
 
         lines = [
             "=" * 80,
-            "BÁO CÁO THỐNG KÊ DỮ LIỆU MÓN ĂN QUANH ĐH KINH TẾ QUỐC DÂN (data/dishes_v2.csv)",
+            "BÁO CÁO THỐNG KÊ DỮ LIỆU MÓN ĂN QUANH ĐH KINH TẾ QUỐC DÂN (data/dishes.csv)",
             "=" * 80,
             f"1. Tổng số món ăn: {total_dishes} món",
             f"   • Nguồn dữ liệu   : Mô phỏng theo thực tế ẩm thực khu vực NEU (ngõ Tự Do, Trần Đại Nghĩa, KTX, Lê Thanh Nghị...)",

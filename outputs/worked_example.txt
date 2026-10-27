@@ -328,7 +328,7 @@ PHẦN 2. CHẤM ĐIỂM VÀ XẾP HẠNG MÓN ĂN THEO NHÓM NHU CẦU (7 TIÊU
    w_cho_ngoi     = 0.08   (Chỗ ngồi nhóm)
    Tổng trọng số = 1.00
 
-2.2. Bốn món lấy từ data/dishes_v2.csv (dữ liệu ban đầu)
+2.2. Bốn món lấy từ data/dishes.csv (dữ liệu ban đầu)
    Món                                               Giá (đ)    K.Cách (m)   TG PV (phút)   Độ no    D.Dưỡng    Độ ngon   Độ đông    Chỗ ngồi 
    [1] Cơm bình dân tự chọn ngõ Tự Do                25000      150          5              4        3          3         5          43       
    [12] Bún đậu mắm tôm thập cẩm KTX NEU             40000      150          8              4        3          5         5          54       

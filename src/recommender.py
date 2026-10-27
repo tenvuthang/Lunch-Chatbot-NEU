@@ -1,7 +1,7 @@
 """
 Module hệ thống gợi ý món ăn đa tiêu chí (Multi-Criteria Dish Recommender).
 Thực hiện:
-1. Đọc dữ liệu món ăn từ data/dishes_v2.csv, hồ sơ trọng số 7 tiêu chí từ config/profiles.json,
+1. Đọc dữ liệu món ăn từ data/dishes.csv, hồ sơ trọng số 7 tiêu chí từ config/profiles.json,
    và tham số độ đông từ config/crowd_config.json (hỗ trợ tương thích ngược với file CSV cũ thiếu cột mới).
 2. Tính toán các đại lượng phụ thuộc độ đông và số người đi ăn:
    - do_dong_hieu_dung = do_dong_cao_diem * he_so_khung_gio[khung_gio]

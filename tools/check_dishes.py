@@ -1,5 +1,5 @@
 """
-Script kiểm tra tính hợp lệ toàn diện của dữ liệu món ăn trong data/dishes_v2.csv.
+Script kiểm tra tính hợp lệ toàn diện của dữ liệu món ăn trong data/dishes.csv.
 Kiểm tra các tiêu chí:
 1. Đủ 15 cột theo đúng thứ tự chuẩn.
 2. Không có ô nào bị bỏ trống.
@@ -42,8 +42,8 @@ EXPECTED_COLUMNS = [
 ]
 
 
-def check_dishes_v2(filepath: str = "data/dishes_v2.csv") -> bool:
-    """Kiểm tra toàn diện tính hợp lệ của file dishes_v2.csv."""
+def check_dishes(filepath: str = "data/dishes.csv") -> bool:
+    """Kiểm tra toàn diện tính hợp lệ của file dishes.csv."""
     abs_path = os.path.join(parent_dir, filepath) if not os.path.isabs(filepath) else filepath
 
     print("=" * 95)
@@ -223,5 +223,8 @@ def check_dishes_v2(filepath: str = "data/dishes_v2.csv") -> bool:
     return True
 
 
+check_dishes_v2 = check_dishes
+
+
 if __name__ == "__main__":
-    check_dishes_v2()
+    check_dishes()

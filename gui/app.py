@@ -600,7 +600,7 @@ class LunchChatbotGUI(QMainWindow):
         QTimer.singleShot(150, self._try_load_bot)
 
     def _new_bot(self) -> Chatbot:
-        """Tạo Chatbot mới với đường dẫn cấu hình trung tâm (data/dishes_v2.csv)."""
+        """Tạo Chatbot mới với đường dẫn cấu hình trung tâm (data/dishes.csv)."""
         return Chatbot(
             model_path=DEFAULT_MODEL_PATH,
             dishes_path=DEFAULT_DISHES_PATH,
@@ -914,7 +914,7 @@ class LunchChatbotGUI(QMainWindow):
         return self.data_tab
 
     def _on_dishes_changed(self):
-        """Nạp lại danh sách món cho bộ gợi ý ngay sau khi sửa dishes_v2.csv (không cần huấn luyện lại)."""
+        """Nạp lại danh sách món cho bộ gợi ý ngay sau khi sửa dishes.csv (không cần huấn luyện lại)."""
         if self.bot is not None:
             try:
                 self.bot.recommender.load_data()

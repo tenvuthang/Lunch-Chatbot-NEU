@@ -1,6 +1,6 @@
 """
 Cấu hình trung tâm cho dự án NEU Lunch Chatbot:
-1. Tập trung toàn bộ đường dẫn dữ liệu mặc định (data/dishes_v2.csv, config/profiles.json, config/crowd_config.json...).
+1. Tập trung toàn bộ đường dẫn dữ liệu mặc định (data/dishes.csv, config/profiles.json, config/crowd_config.json...).
 2. Đọc tham số mô hình độ đông & chỗ ngồi từ config/crowd_config.json (không viết cứng hệ số trong code).
 3. Hàm suy luận khung giờ đi ăn (cao_diem, binh_thuong, vang) từ đồng hồ hệ thống hoặc chuỗi giờ HH:MM.
 """
@@ -14,7 +14,7 @@ SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SRC_DIR)
 
 # Đường dẫn tương đối chuẩn (khi chạy từ thư mục gốc)
-REL_DISHES_PATH = os.path.join("data", "dishes_v2.csv")
+REL_DISHES_PATH = os.path.join("data", "dishes.csv")
 REL_LEGACY_DISHES_V1_PATH = os.path.join("data", "legacy", "dishes_v1.csv")
 REL_INTENTS_PATH = os.path.join("data", "intents.csv")
 REL_TEST_INTENTS_PATH = os.path.join("data", "test_intents.csv")
@@ -35,7 +35,7 @@ DEFAULT_CROWD_CONFIG_PATH = os.path.join(ROOT_DIR, REL_CROWD_CONFIG_PATH)
 DEFAULT_OUTPUTS_DIR = os.path.join(ROOT_DIR, REL_OUTPUTS_DIR)
 DEFAULT_MODEL_PATH = os.path.join(ROOT_DIR, REL_MODEL_PATH)
 
-# Giá trị mặc định khi đọc file CSV cũ thiếu các cột của dishes_v2.csv
+# Giá trị mặc định khi đọc file CSV cũ thiếu các cột độ đông / chỗ ngồi
 DEFAULT_DO_DONG_CAO_DIEM = 3
 DEFAULT_SO_CHO_NGOI = 30
 DEFAULT_NGUON_DU_LIEU = "mô phỏng"

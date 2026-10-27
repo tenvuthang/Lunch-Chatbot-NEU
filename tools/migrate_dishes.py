@@ -1,5 +1,5 @@
 """
-Script di chuyển và nâng cấp dữ liệu món ăn từ data/legacy/dishes_v1.csv sang data/dishes_v2.csv.
+Script di chuyển và nâng cấp dữ liệu món ăn từ data/legacy/dishes_v1.csv sang data/dishes.csv.
 Bổ sung hai thuộc tính mới:
 - do_dong_cao_diem (1-5): mức độ đông đúc vào khung giờ cao điểm trưa (11:30 - 13:00).
 - so_cho_ngoi (nguyên > 0): quy mô chỗ ngồi thực tế của quán.
@@ -21,7 +21,7 @@ if parent_dir not in sys.path:
 
 from src.io_utils import read_csv_dicts, write_csv_rows
 
-# Thứ tự 15 cột chuẩn của dishes_v2.csv theo yêu cầu
+# Thứ tự 15 cột chuẩn của dishes.csv theo yêu cầu
 COLUMNS_V2 = [
     "id",
     "ten_mon",
@@ -293,15 +293,15 @@ def calculate_seats(dish: Dict[str, Any]) -> Tuple[int, str]:
 
 
 def migrate():
-    """Thực hiện di chuyển dữ liệu từ data/legacy/dishes_v1.csv sang data/dishes_v2.csv."""
+    """Thực hiện di chuyển dữ liệu từ data/legacy/dishes_v1.csv sang data/dishes.csv."""
     v1_path = os.path.join(parent_dir, "data", "legacy", "dishes_v1.csv")
-    v2_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+    v2_path = os.path.join(parent_dir, "data", "dishes.csv")
 
     if not os.path.exists(v1_path):
         raise FileNotFoundError(f"Không tìm thấy file nguồn: {v1_path}")
 
     print("=" * 80)
-    print("BẮT ĐẦU CHUYỂN ĐỔI DỮ LIỆU: dishes_v1.csv -> dishes_v2.csv")
+    print("BẮT ĐẦU CHUYỂN ĐỔI DỮ LIỆU: dishes_v1.csv -> dishes.csv")
     print("=" * 80)
 
     legacy_dishes = read_csv_dicts(v1_path)
@@ -356,7 +356,7 @@ def migrate():
         ]
         migrated_rows.append(row)
 
-    # Ghi dữ liệu ra file data/dishes_v2.csv bằng hàm tiện ích dùng chung chuẩn UTF-8 BOM
+    # Ghi dữ liệu ra file data/dishes.csv bằng hàm tiện ích dùng chung chuẩn UTF-8 BOM
     write_csv_rows(v2_path, COLUMNS_V2, migrated_rows)
     print(f"3. Đã ghi thành công {len(migrated_rows)} món vào: {v2_path}")
     print("=" * 80 + "\n")
