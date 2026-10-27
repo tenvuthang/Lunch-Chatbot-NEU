@@ -1,0 +1,23 @@
+{
+  "_comment": "Cấu hình tính toán mức độ đông đúc và chỗ ngồi cho Lunch Chatbot NEU",
+  "he_so_khung_gio": {
+    "cao_diem": 1.0,
+    "binh_thuong": 0.6,
+    "vang": 0.3
+  },
+  "gio_cao_diem": [
+    "11:30",
+    "13:00"
+  ],
+  "a": 1.0,
+  "b": 0.10,
+  "he_so_chiem_cho": 0.9,
+  "ngay_hieu_luc": "2026-10-27",
+  "mo_ta": {
+    "he_so_khung_gio": "Trọng số nhân với độ đông cơ sở: 1.0 vào giờ cao điểm tan học trưa (11:30-13:00), 0.6 vào giờ ăn bình thường (11:00-11:30 và 13:00-13:30), 0.3 vào khung giờ thấp điểm/vắng khách.",
+    "gio_cao_diem": "Khung giờ cao điểm buổi trưa sinh viên NEU tan lớp tập trung ăn uống đông nhất (từ 11:30 đến 13:00).",
+    "a": "Hệ số tỷ lệ chuẩn hóa tải lượng khách phục vụ trong mô hình ước tính độ đông.",
+    "b": "Hệ số điều chỉnh độ trễ dịch vụ và thời gian xoay vòng bàn theo quy mô quán.",
+    "he_so_chiem_cho": "Ngưỡng tỷ lệ chiếm chỗ tới hạn (0.9 tức 90% số ghế đã có khách), vượt ngưỡng này quán được cảnh báo sắp hết chỗ/phải chờ bàn."
+  }
+}

@@ -18,6 +18,8 @@ Module đánh giá mô hình học máy và hệ thống gợi ý cho Lunch Chat
 import os
 import sys
 import math
+import json
+from typing import Dict, Any
 import numpy as np
 import pandas as pd
 
@@ -56,6 +58,7 @@ from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.pipeline import Pipeline
 
+from src.io_utils import read_csv_dataframe, write_csv_dataframe
 from src.preprocess import preprocess
 from src.classifier import NeedClassifier, build_model
 
@@ -86,8 +89,8 @@ class ModelEvaluator:
         self.outputs_dir = os.path.join(parent_dir, outputs_dir) if not os.path.isabs(outputs_dir) else outputs_dir
         os.makedirs(self.outputs_dir, exist_ok=True)
 
-        self.df_train = pd.read_csv(self.train_csv_path, encoding="utf-8")
-        self.df_test = pd.read_csv(self.test_csv_path, encoding="utf-8")
+        self.df_train = read_csv_dataframe(self.train_csv_path)
+        self.df_test = read_csv_dataframe(self.test_csv_path)
 
         self.labels = sorted(list(self.df_train["label"].unique()))
 
@@ -133,9 +136,13 @@ class ModelEvaluator:
         rep_dict = classification_report(y_true, y_pred, labels=self.labels, output_dict=True, zero_division=0)
         rep_str = classification_report(y_true, y_pred, labels=self.labels, zero_division=0)
         cm = confusion_matrix(y_true, y_pred, labels=self.labels)
+        n_correct = sum(1 for t, p in zip(y_true, y_pred) if t == p)
 
         return {
             "accuracy": round(float(acc), 4),
+            "n_correct": n_correct,
+            "n_total": len(y_true),
+            "labels": list(self.labels),
             "report_text": rep_str,
             "report_dict": rep_dict,
             "confusion_matrix": cm,
@@ -143,6 +150,8 @@ class ModelEvaluator:
             "y_true": y_true,
             "y_pred": y_pred
         }
+
+    evaluate = evaluate_on_test
 
     def plot_confusion_matrix(
         self,
@@ -286,7 +295,7 @@ class ModelEvaluator:
 
         df_res = pd.DataFrame(results)
         csv_path = os.path.join(self.outputs_dir, "model_comparison.csv")
-        df_res.to_csv(csv_path, index=False, encoding="utf-8-sig")
+        write_csv_dataframe(df_res, csv_path, index=False)
 
         # Vẽ biểu đồ cột so sánh
         self._plot_model_comparison(df_res)
@@ -454,7 +463,7 @@ class ModelEvaluator:
 
         df_errors = pd.DataFrame(rows)
         csv_path = os.path.join(self.outputs_dir, "misclassified_samples.csv")
-        df_errors.to_csv(csv_path, index=False, encoding="utf-8-sig")
+        write_csv_dataframe(df_errors, csv_path, index=False)
         return df_errors
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -470,19 +479,272 @@ class ModelEvaluator:
         return _generate(parent_dir, self.outputs_dir, output_filename)
 
     # ══════════════════════════════════════════════════════════════════════════
+    # 7. PHÂN TÍCH VÀ TRỰC QUAN HÓA ĐỘ ĐÔNG & CHỖ NGỒI (CROWD & SEATING)
+    # ══════════════════════════════════════════════════════════════════════════
+    def export_crowd_analysis(self, output_filename: str = "crowd_analysis.csv") -> str:
+        """Xuất bảng tổng hợp phân tích độ đông, thời gian chờ và chỗ trống của 50 món ăn."""
+        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        crowd_cfg_path = os.path.join(parent_dir, "config", "crowd_config.json")
+        df_dishes = read_csv_dataframe(dishes_path)
+        with open(crowd_cfg_path, "r", encoding="utf-8") as f:
+            crowd_cfg = json.load(f)
+
+        from src.recommender import compute_crowd_metrics
+        rows = []
+        for _, row in df_dishes.iterrows():
+            d = row.to_dict()
+            m_cd_1 = compute_crowd_metrics(d, so_nguoi=1, khung_gio="cao_diem", crowd_cfg=crowd_cfg)
+            m_cd_4 = compute_crowd_metrics(d, so_nguoi=4, khung_gio="cao_diem", crowd_cfg=crowd_cfg)
+            m_cd_8 = compute_crowd_metrics(d, so_nguoi=8, khung_gio="cao_diem", crowd_cfg=crowd_cfg)
+            m_bt_1 = compute_crowd_metrics(d, so_nguoi=1, khung_gio="binh_thuong", crowd_cfg=crowd_cfg)
+            m_v_1 = compute_crowd_metrics(d, so_nguoi=1, khung_gio="vang", crowd_cfg=crowd_cfg)
+
+            rows.append({
+                "id": int(d["id"]),
+                "ten_mon": d["ten_mon"],
+                "loai": d["loai"],
+                "gia_vnd": int(d["gia_vnd"]),
+                "khoang_cach_m": int(d["khoang_cach_m"]),
+                "thoi_gian_phuc_vu_phut": int(d["thoi_gian_phuc_vu_phut"]),
+                "do_dong_cao_diem": int(d["do_dong_cao_diem"]),
+                "so_cho_ngoi": int(d["so_cho_ngoi"]),
+                "do_dong_hieu_dung_cao_diem": round(m_cd_1["do_dong_hieu_dung"], 2),
+                "do_dong_hieu_dung_binh_thuong": round(m_bt_1["do_dong_hieu_dung"], 2),
+                "do_dong_hieu_dung_vang": round(m_v_1["do_dong_hieu_dung"], 2),
+                "cho_trong_cao_diem": round(m_cd_1["cho_trong"], 2),
+                "cho_trong_binh_thuong": round(m_bt_1["cho_trong"], 2),
+                "cho_trong_vang": round(m_v_1["cho_trong"], 2),
+                "thoi_gian_cho_1ng_caodiem": round(m_cd_1["thoi_gian_cho"], 2),
+                "thoi_gian_cho_4ng_caodiem": round(m_cd_4["thoi_gian_cho"], 2),
+                "thoi_gian_cho_8ng_caodiem": round(m_cd_8["thoi_gian_cho"], 2),
+                "cho_ngoi_nhom_1ng_caodiem": round(m_cd_1["cho_ngoi_nhom"], 4),
+                "cho_ngoi_nhom_4ng_caodiem": round(m_cd_4["cho_ngoi_nhom"], 4),
+                "cho_ngoi_nhom_8ng_caodiem": round(m_cd_8["cho_ngoi_nhom"], 4),
+                "canh_bao_cho_1ng": "Chờ chỗ" if m_cd_1["seat_warning"] else "Đủ chỗ",
+                "canh_bao_cho_4ng": "Có thể phải chờ chỗ" if m_cd_4["seat_warning"] else "Đủ chỗ",
+                "canh_bao_cho_8ng": "Có thể phải chờ chỗ" if m_cd_8["seat_warning"] else "Đủ chỗ",
+            })
+
+        df_out = pd.DataFrame(rows)
+        out_path = os.path.join(self.outputs_dir, output_filename)
+        write_csv_dataframe(df_out, out_path, index=False)
+        return out_path
+
+    def plot_crowd_wait_vs_people(self, output_filename: str = "crowd_wait_vs_people.png") -> str:
+        """Vẽ biểu đồ thời gian chờ theo số người (1-10) cho 5 món điển hình qua 3 khung giờ."""
+        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        crowd_cfg_path = os.path.join(parent_dir, "config", "crowd_config.json")
+        df_dishes = read_csv_dataframe(dishes_path)
+        with open(crowd_cfg_path, "r", encoding="utf-8") as f:
+            crowd_cfg = json.load(f)
+
+        from src.recommender import compute_crowd_metrics
+        typical_ids = [1, 5, 12, 23, 28]
+        dish_map = {int(d["id"]): d.to_dict() for _, d in df_dishes.iterrows()}
+        typical_dishes = [dish_map[i] for i in typical_ids if i in dish_map]
+
+        fig, axes = plt.subplots(1, 3, figsize=(16, 5.5), sharey=True)
+        slots = [
+            ("cao_diem", "Khung giờ Cao điểm (11:30 - 13:00)\nHệ số khung giờ = 1.0"),
+            ("binh_thuong", "Khung giờ Bình thường (11:00-11:30, 13:00-14:00)\nHệ số khung giờ = 0.6"),
+            ("vang", "Khung giờ Vắng khách\nHệ số khung giờ = 0.3")
+        ]
+
+        colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+        markers = ["o", "s", "^", "D", "v"]
+
+        for ax, (slot, slot_title) in zip(axes, slots):
+            ax.set_title(slot_title, fontsize=10.5, fontweight="bold", pad=8)
+            for idx, d in enumerate(typical_dishes):
+                waits = []
+                for p in range(1, 11):
+                    m = compute_crowd_metrics(d, so_nguoi=p, khung_gio=slot, crowd_cfg=crowd_cfg)
+                    waits.append(m["thoi_gian_cho"])
+                lbl = f"[{d['id']}] {d['ten_mon'][:22]}... (TG gốc: {d['thoi_gian_phuc_vu_phut']}p, Đông: {d['do_dong_cao_diem']}/5)"
+                ax.plot(range(1, 11), waits, label=lbl, color=colors[idx], marker=markers[idx], markersize=5, linewidth=1.8)
+
+            ax.set_xlabel("Số người đi ăn trong nhóm (người)", fontsize=9.5)
+            ax.set_xticks(range(1, 11))
+            ax.grid(True, linestyle="--", alpha=0.55)
+
+        axes[0].set_ylabel("Thời gian chờ ước tính (phút)", fontsize=10.5)
+        axes[0].legend(fontsize=8, loc="upper left", framealpha=0.9)
+        fig.suptitle("THỜI GIAN CHỜ ƯỚC TÍNH THEO SỐ NGƯỜI ĐI ĂN (1 - 10 NGƯỜI) CHO 5 MÓN ĐIỂN HÌNH",
+                     fontsize=12, fontweight="bold", y=0.98)
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.86)
+        out_path = os.path.join(self.outputs_dir, output_filename)
+        plt.savefig(out_path, dpi=200)
+        plt.close(fig)
+        return out_path
+
+    def plot_crowd_ranking_shift(self, output_filename: str = "crowd_ranking_shift.png") -> str:
+        """Vẽ biểu đồ thay đổi thứ hạng Top-5 khi thay đổi số người đi ăn (1, 4, 8 người)."""
+        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        profiles_path = os.path.join(parent_dir, "config", "profiles.json")
+        crowd_cfg_path = os.path.join(parent_dir, "config", "crowd_config.json")
+
+        from src.recommender import DishRecommender
+        rec = DishRecommender(dishes_path=dishes_path, profiles_path=profiles_path, crowd_config_path=crowd_cfg_path)
+
+        intent = "tiet_kiem"
+        r1 = rec.recommend(intent, top_k=50, num_people=1, time_slot="cao_diem")["all_ranked"]
+        r4 = rec.recommend(intent, top_k=50, num_people=4, time_slot="cao_diem")["all_ranked"]
+        r8 = rec.recommend(intent, top_k=50, num_people=8, time_slot="cao_diem")["all_ranked"]
+
+        rank_map_1 = {item["dish"]["id"]: (rank, item["dish"]["ten_mon"], item["score"]) for rank, item in enumerate(r1, 1)}
+        rank_map_4 = {item["dish"]["id"]: (rank, item["dish"]["ten_mon"], item["score"]) for rank, item in enumerate(r4, 1)}
+        rank_map_8 = {item["dish"]["id"]: (rank, item["dish"]["ten_mon"], item["score"]) for rank, item in enumerate(r8, 1)}
+
+        top5_dishes = r1[:5]
+        top5_ids = [item["dish"]["id"] for item in top5_dishes]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        x_points = [1, 2, 3]
+        x_labels = ["1 người\n(Cá nhân)", "4 người\n(Nhóm nhỏ)", "8 người\n(Nhóm đông)"]
+
+        palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+
+        for idx, did in enumerate(top5_ids):
+            rank1, name, s1 = rank_map_1[did]
+            rank4, _, s4 = rank_map_4[did]
+            rank8, _, s8 = rank_map_8[did]
+            y_ranks = [rank1, rank4, rank8]
+
+            line_color = palette[idx % len(palette)]
+            ax.plot(x_points, y_ranks, marker="o", markersize=9, linewidth=2.4,
+                    color=line_color, label=f"[{did}] {name}")
+
+            # Ghi chú thứ hạng tại các điểm
+            for x, y in zip(x_points, y_ranks):
+                ax.annotate(f"#{y}", (x, y), textcoords="offset points", xytext=(0, 8),
+                            ha="center", fontsize=9, fontweight="bold", color=line_color)
+
+        ax.invert_yaxis()
+        ax.set_xticks(x_points)
+        ax.set_xticklabels(x_labels, fontsize=10.5, fontweight="bold")
+        ax.set_ylabel("Thứ hạng gợi ý (Hạng 1 ở trên cùng)", fontsize=11, fontweight="bold")
+        ax.set_title("SỰ THAY ĐỔI THỨ HẠNG TOP-5 MÓN ĂN KHI QUY MÔ NHÓM TĂNG LÊN (1 -> 4 -> 8 NGƯỜI)\n"
+                     "Nhóm nhu cầu: Tiết kiệm (Giờ cao điểm trưa 11:30 - 13:00)",
+                     fontsize=12, fontweight="bold", pad=14)
+        ax.grid(True, linestyle="--", alpha=0.5)
+        ax.legend(fontsize=9, loc="center left", bbox_to_anchor=(1.02, 0.5), framealpha=0.95)
+
+        plt.tight_layout()
+        out_path = os.path.join(self.outputs_dir, output_filename)
+        plt.savefig(out_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        return out_path
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 8. THỐNG KÊ TỔNG QUAN DỮ LIỆU dishes_v2.csv (DATA SUMMARY)
+    # ══════════════════════════════════════════════════════════════════════════
+    def export_data_summary(self, output_filename: str = "data_summary.txt") -> str:
+        """Tổng hợp thống kê thuộc tính, phân bố độ đông, chỗ ngồi và xuất file data_summary.txt."""
+        dishes_path = os.path.join(parent_dir, "data", "dishes_v2.csv")
+        df = read_csv_dataframe(dishes_path)
+
+        total_dishes = len(df)
+        chay_count = int(df["chay"].sum())
+        man_count = total_dishes - chay_count
+        cay_count = int(df["cay"].sum())
+        khong_cay_count = total_dishes - cay_count
+
+        loai_counts = df["loai"].value_counts().to_dict()
+        do_dong_counts = df["do_dong_cao_diem"].value_counts().sort_index().to_dict()
+
+        so_cho = df["so_cho_ngoi"].astype(int)
+        min_cho = int(so_cho.min())
+        max_cho = int(so_cho.max())
+        mean_cho = float(so_cho.mean())
+
+        c_ganh = int(((so_cho >= 4) & (so_cho <= 12)).sum())
+        c_nho = int(((so_cho >= 15) & (so_cho <= 30)).sum())
+        c_thuong = int(((so_cho >= 31) & (so_cho <= 60)).sum())
+        c_lon = int(((so_cho >= 61) & (so_cho <= 120)).sum())
+
+        gia = df["gia_vnd"].astype(int)
+        dist = df["khoang_cach_m"].astype(int)
+        time_prep = df["thoi_gian_phuc_vu_phut"].astype(int)
+
+        lines = [
+            "=" * 80,
+            "BÁO CÁO THỐNG KÊ DỮ LIỆU MÓN ĂN QUANH ĐH KINH TẾ QUỐC DÂN (data/dishes_v2.csv)",
+            "=" * 80,
+            f"1. Tổng số món ăn: {total_dishes} món",
+            f"   • Nguồn dữ liệu   : Mô phỏng theo thực tế ẩm thực khu vực NEU (ngõ Tự Do, Trần Đại Nghĩa, KTX, Lê Thanh Nghị...)",
+            f"   • Số cột thuộc tính: 15 cột đầy đủ theo chuẩn kiến trúc hệ thống",
+            "",
+            "2. Phân loại thực đơn & Chế độ ăn uống:",
+            f"   • Món chay        : {chay_count:2d}/{total_dishes} món ({chay_count/total_dishes*100:.1f}%)",
+            f"   • Món mặn         : {man_count:2d}/{total_dishes} món ({man_count/total_dishes*100:.1f}%)",
+            f"   • Món cay         : {cay_count:2d}/{total_dishes} món ({cay_count/total_dishes*100:.1f}%)",
+            f"   • Món không cay   : {khong_cay_count:2d}/{total_dishes} món ({khong_cay_count/total_dishes*100:.1f}%)",
+            "",
+            "   Phân bố theo nhóm món ăn (loại):",
+        ]
+        for l_name, cnt in loai_counts.items():
+            lines.append(f"     - {l_name:<16}: {cnt:2d} món ({cnt/total_dishes*100:.1f}%)")
+
+        lines.extend([
+            "",
+            "3. Phân bố mức độ đông đúc vào giờ cao điểm (do_dong_cao_diem 1 - 5):",
+            f"   • Mức 1 (Rất vắng / Thưa thớt)   : {do_dong_counts.get(1, 0):2d}/{total_dishes} món ({do_dong_counts.get(1, 0)/total_dishes*100:.1f}%)",
+            f"   • Mức 2 (Hơi vắng / Thoáng bàn)  : {do_dong_counts.get(2, 0):2d}/{total_dishes} món ({do_dong_counts.get(2, 0)/total_dishes*100:.1f}%)",
+            f"   • Mức 3 (Bình thường / Ổn định)  : {do_dong_counts.get(3, 0):2d}/{total_dishes} món ({do_dong_counts.get(3, 0)/total_dishes*100:.1f}%)",
+            f"   • Mức 4 (Đông khách)             : {do_dong_counts.get(4, 0):2d}/{total_dishes} món ({do_dong_counts.get(4, 0)/total_dishes*100:.1f}%)",
+            f"   • Mức 5 (Rất đông / Chật kín bàn): {do_dong_counts.get(5, 0):2d}/{total_dishes} món ({do_dong_counts.get(5, 0)/total_dishes*100:.1f}%)",
+            "   -> Đánh giá: Phân bố cân đối, đầy đủ mọi mức từ 1 đến 5, không có mức nào vượt quá 40%.",
+            "",
+            "4. Phân bố quy mô chỗ ngồi (so_cho_ngoi):",
+            f"   • Thấp nhất (Min) : {min_cho} chỗ",
+            f"   • Cao nhất (Max)  : {max_cho} chỗ",
+            f"   • Trung bình      : {mean_cho:.1f} chỗ",
+            f"   • Phân khúc quy mô:",
+            f"     - Gánh hàng / Mang đi (4 - 12 chỗ)        : {c_ganh:2d}/{total_dishes} món ({c_ganh/total_dishes*100:.1f}%)",
+            f"     - Quán nhỏ / Vỉa hè (15 - 30 chỗ)         : {c_nho:2d}/{total_dishes} món ({c_nho/total_dishes*100:.1f}%)",
+            f"     - Quán cơm/bún/phở thường (31 - 60 chỗ)   : {c_thuong:2d}/{total_dishes} món ({c_thuong/total_dishes*100:.1f}%)",
+            f"     - Quán lớn / Cantin / Chuỗi (61 - 120 chỗ): {c_lon:2d}/{total_dishes} món ({c_lon/total_dishes*100:.1f}%)",
+            "",
+            "5. Thống kê các chỉ số hoạt động:",
+            f"   • Giá tiền một suất (gia_vnd)            : Min = {int(gia.min()):,d}đ | Max = {int(gia.max()):,d}đ | Trung bình = {float(gia.mean()):,.0f}đ",
+            f"   • Khoảng cách đi bộ (khoang_cach_m)      : Min = {int(dist.min())}m | Max = {int(dist.max())}m | Trung bình = {float(dist.mean()):.1f}m",
+            f"   • Thời gian chế biến (thoi_gian_phuc_vu) : Min = {int(time_prep.min())} phút | Max = {int(time_prep.max())} phút | Trung bình = {float(time_prep.mean()):.1f} phút",
+            "=" * 80,
+        ])
+
+        summary_text = "\n".join(lines)
+        out_path = os.path.join(self.outputs_dir, output_filename)
+        with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(summary_text + "\n")
+        return out_path
+
+    # ══════════════════════════════════════════════════════════════════════════
     # CHẠY TOÀN BỘ QUY TRÌNH ĐÁNH GIÁ (FULL RUN)
     # ══════════════════════════════════════════════════════════════════════════
     def run_all(self) -> None:
-        """Thực thi đầy đủ 6 bước đánh giá và xuất toàn bộ báo cáo, biểu đồ, số liệu."""
+        """Thực thi đầy đủ các bước đánh giá và xuất toàn bộ báo cáo, biểu đồ, số liệu."""
         print("\n" + "=" * 80)
         print("BẮT ĐẦU QUY TRÌNH ĐÁNH GIÁ MÔ HÌNH VÀ HỆ THỐNG GỢI Ý (LUNCH CHATBOT NEU)".center(80))
         print("=" * 80 + "\n")
 
         # 1. Huấn luyện mô hình chuẩn và đánh giá trên test_intents.csv
-        print("--- [BƯỚC 1/6] Đánh giá trên tập kiểm thử độc lập (data/test_intents.csv) ---")
+        print("--- [BƯỚC 1/8] Đánh giá trên tập kiểm thử độc lập (data/test_intents.csv) ---")
         clf_main = NeedClassifier(model_type="nb", alpha=0.5)
         clf_main.train(self.train_csv_path)
         eval_test = self.evaluate_on_test(clf_main)
+
+        from src.eval_insights import make_signature, result_to_payload, save_eval_cache
+        sig = make_signature(
+            alpha=clf_main.alpha,
+            ngram_range=clf_main.ngram_range,
+            remove_stopwords=clf_main.remove_stopwords,
+            train_path=self.train_csv_path,
+            test_path=self.test_csv_path,
+            model_type=clf_main.model_type,
+        )
+        cache_path = os.path.join(self.outputs_dir, "eval_result.json")
+        save_eval_cache(cache_path, result_to_payload(eval_test, self.labels, sig))
 
         print(f"  • Độ chính xác (Accuracy): {eval_test['accuracy']:.2%}")
         print("\nBáo cáo phân loại chi tiết (Classification Report):")
@@ -492,21 +754,21 @@ class ModelEvaluator:
         print(f"  -> Đã vẽ và lưu ma trận nhầm lẫn: {cm_path} (dpi=200)\n")
 
         # 2. 5-Fold Cross Validation trên intents.csv
-        print("--- [BƯỚC 2/6] Cross-Validation 5-fold phân tầng trên data/intents.csv ---")
+        print("--- [BƯỚC 2/8] Cross-Validation 5-fold phân tầng trên data/intents.csv ---")
         cv_main = self.run_5fold_cv(model_type="nb", alpha=0.5)
         print(f"  • Accuracy trung bình : {cv_main['accuracy_mean']:.2%} ± {cv_main['accuracy_std']:.2%}")
         print(f"  • Macro F1 trung bình : {cv_main['f1_mean']:.2%} ± {cv_main['f1_std']:.2%}")
         print(f"  • Điểm từng fold      : {[round(a, 4) for a in cv_main['fold_accuracies']]}\n")
 
         # 3. So sánh 3 mô hình (MultinomialNB, LogisticRegression, LinearSVC)
-        print("--- [BƯỚC 3/6] So sánh 3 mô hình: MultinomialNB, LogisticRegression, LinearSVC ---")
+        print("--- [BƯỚC 3/8] So sánh 3 mô hình: MultinomialNB, LogisticRegression, LinearSVC ---")
         df_comp = self.compare_models()
         print(df_comp.to_string(index=False))
         print(f"  -> Đã lưu bảng: {os.path.join(self.outputs_dir, 'model_comparison.csv')}")
         print(f"  -> Đã lưu biểu đồ cột so sánh: {os.path.join(self.outputs_dir, 'model_comparison.png')} (dpi=200)\n")
 
         # 4. Thí nghiệm tham số
-        print("--- [BƯỚC 4/6] Thí nghiệm tham số (Alpha, N-gram, Stopwords) ---")
+        print("--- [BƯỚC 4/8] Thí nghiệm tham số (Alpha, N-gram, Stopwords) ---")
         exp_res = self.run_hyperparameter_experiments()
         print(f"  • Thí nghiệm Alpha    : {exp_res['alpha']['values']}")
         print(f"    -> Accuracies       : {[round(a, 3) for a in exp_res['alpha']['accuracies']]}")
@@ -519,7 +781,7 @@ class ModelEvaluator:
         print(f"    -> Đã lưu biểu đồ   : {os.path.join(self.outputs_dir, 'exp_stopwords.png')}\n")
 
         # 5. Xuất danh sách các câu test đoán sai
-        print("--- [BƯỚC 5/6] Liệt kê các câu kiểm thử bị phân loại sai ---")
+        print("--- [BƯỚC 5/8] Liệt kê các câu kiểm thử bị phân loại sai ---")
         df_errors = self.export_misclassified(clf_main)
         print(f"  • Tổng số câu đoán sai: {len(df_errors)}/{len(self.df_test)} câu ({len(df_errors)/len(self.df_test):.1%})")
         if not df_errors.empty:
@@ -527,10 +789,26 @@ class ModelEvaluator:
         print(f"  -> Đã lưu danh sách chi tiết: {os.path.join(self.outputs_dir, 'misclassified_samples.csv')}\n")
 
         # 6. Tạo worked_example.txt
-        print("--- [BƯỚC 6/6] Tạo tài liệu tính toán chi tiết bằng tay (outputs/worked_example.txt) ---")
+        print("--- [BƯỚC 6/8] Tạo tài liệu tính toán chi tiết bằng tay (outputs/worked_example.txt) ---")
         worked_path = self.generate_worked_example("worked_example.txt")
         print(f"  -> Đã tạo tài liệu worked example thành công: {worked_path}")
-        print("     (Gồm chi tiết Prior, Likelihood, Log-posterior, Softmax và Chấm điểm Min-Max cho Chương 2)\n")
+        print("     (Gồm chi tiết Prior, Likelihood, Log-posterior, Softmax và Chấm điểm Min-Max 7 tiêu chí cho Chương 2)\n")
+
+        # 7. Phân tích độ đông & Trực quan hóa
+        print("--- [BƯỚC 7/8] Phân tích Độ đông & Chỗ ngồi (CSV và 2 biểu đồ PNG dpi=200) ---")
+        crowd_csv_path = self.export_crowd_analysis("crowd_analysis.csv")
+        print(f"  -> Đã lưu bảng phân tích độ đông 50 món: {crowd_csv_path}")
+        wait_chart_path = self.plot_crowd_wait_vs_people("crowd_wait_vs_people.png")
+        print(f"  -> Đã lưu biểu đồ thời gian chờ: {wait_chart_path}")
+        shift_chart_path = self.plot_crowd_ranking_shift("crowd_ranking_shift.png")
+        print(f"  -> Đã lưu biểu đồ thay đổi thứ hạng Top-5: {shift_chart_path}\n")
+
+        # 8. Thống kê tổng quan dữ liệu món ăn
+        print("--- [BƯỚC 8/8] Thống kê tổng quan dữ liệu món ăn (outputs/data_summary.txt) ---")
+        summary_path = self.export_data_summary("data_summary.txt")
+        print(f"  -> Đã xuất báo cáo thống kê dữ liệu: {summary_path}")
+        with open(summary_path, "r", encoding="utf-8") as f:
+            print(f.read())
 
         print("=" * 80)
         print("HOÀN TẤT TOÀN BỘ QUY TRÌNH ĐÁNH GIÁ THÀNH CÔNG!".center(80))

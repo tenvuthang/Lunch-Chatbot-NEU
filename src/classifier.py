@@ -24,8 +24,10 @@ if parent_dir not in sys.path:
 
 try:
     from src.preprocess import preprocess
+    from src.io_utils import read_csv_dataframe
 except ImportError:
     from preprocess import preprocess
+    from io_utils import read_csv_dataframe
 
 
 def build_model(
@@ -118,7 +120,7 @@ class NeedClassifier:
         if not os.path.exists(csv_path):
             raise FileNotFoundError(f"Không tìm thấy file dữ liệu huấn luyện: {csv_path}")
 
-        df = pd.read_csv(csv_path, encoding="utf-8")
+        df = read_csv_dataframe(csv_path)
         if "text" not in df.columns or "label" not in df.columns:
             raise ValueError(f"File {csv_path} phải chứa đủ 2 cột 'text' và 'label'.")
 
@@ -220,7 +222,8 @@ class NeedClassifier:
             "ngram_range": self.ngram_range,
             "sublinear_tf": self.sublinear_tf,
             "alpha": self.alpha,
-            "C": self.C
+            "C": self.C,
+            "remove_stopwords": self.remove_stopwords
         }
         joblib.dump(payload, filepath)
 
@@ -236,6 +239,8 @@ class NeedClassifier:
         self.sublinear_tf = payload.get("sublinear_tf", True)
         self.alpha = payload.get("alpha", 0.5)
         self.C = payload.get("C", 1.0)
+        # File cũ chưa lưu thiết lập này: mô hình cũ luôn được huấn luyện với bỏ stopword (mặc định True)
+        self.remove_stopwords = payload.get("remove_stopwords", True)
         return self
 
 

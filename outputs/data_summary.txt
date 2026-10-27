@@ -1,0 +1,50 @@
+================================================================================
+BÁO CÁO THỐNG KÊ DỮ LIỆU MÓN ĂN QUANH ĐH KINH TẾ QUỐC DÂN (data/dishes_v2.csv)
+================================================================================
+1. Tổng số món ăn: 50 món
+   • Nguồn dữ liệu   : Mô phỏng theo thực tế ẩm thực khu vực NEU (ngõ Tự Do, Trần Đại Nghĩa, KTX, Lê Thanh Nghị...)
+   • Số cột thuộc tính: 15 cột đầy đủ theo chuẩn kiến trúc hệ thống
+
+2. Phân loại thực đơn & Chế độ ăn uống:
+   • Món chay        :  6/50 món (12.0%)
+   • Món mặn         : 44/50 món (88.0%)
+   • Món cay         : 17/50 món (34.0%)
+   • Món không cay   : 33/50 món (66.0%)
+
+   Phân bố theo nhóm món ăn (loại):
+     - cơm             : 10 món (20.0%)
+     - bún             :  9 món (18.0%)
+     - bánh mì         :  6 món (12.0%)
+     - mì              :  5 món (10.0%)
+     - phở             :  4 món (8.0%)
+     - salad           :  4 món (8.0%)
+     - đồ ăn nhanh     :  3 món (6.0%)
+     - cơm văn phòng   :  2 món (4.0%)
+     - khác            :  2 món (4.0%)
+     - xôi             :  2 món (4.0%)
+     - bánh giò        :  2 món (4.0%)
+     - nem nướng       :  1 món (2.0%)
+
+3. Phân bố mức độ đông đúc vào giờ cao điểm (do_dong_cao_diem 1 - 5):
+   • Mức 1 (Rất vắng / Thưa thớt)   :  4/50 món (8.0%)
+   • Mức 2 (Hơi vắng / Thoáng bàn)  :  7/50 món (14.0%)
+   • Mức 3 (Bình thường / Ổn định)  : 14/50 món (28.0%)
+   • Mức 4 (Đông khách)             : 11/50 món (22.0%)
+   • Mức 5 (Rất đông / Chật kín bàn): 14/50 món (28.0%)
+   -> Đánh giá: Phân bố cân đối, đầy đủ mọi mức từ 1 đến 5, không có mức nào vượt quá 40%.
+
+4. Phân bố quy mô chỗ ngồi (so_cho_ngoi):
+   • Thấp nhất (Min) : 6 chỗ
+   • Cao nhất (Max)  : 85 chỗ
+   • Trung bình      : 38.9 chỗ
+   • Phân khúc quy mô:
+     - Gánh hàng / Mang đi (4 - 12 chỗ)        :  6/50 món (12.0%)
+     - Quán nhỏ / Vỉa hè (15 - 30 chỗ)         : 10/50 món (20.0%)
+     - Quán cơm/bún/phở thường (31 - 60 chỗ)   : 30/50 món (60.0%)
+     - Quán lớn / Cantin / Chuỗi (61 - 120 chỗ):  4/50 món (8.0%)
+
+5. Thống kê các chỉ số hoạt động:
+   • Giá tiền một suất (gia_vnd)            : Min = 20,000đ | Max = 80,000đ | Trung bình = 39,700đ
+   • Khoảng cách đi bộ (khoang_cach_m)      : Min = 80m | Max = 900m | Trung bình = 369.4m
+   • Thời gian chế biến (thoi_gian_phuc_vu) : Min = 5 phút | Max = 15 phút | Trung bình = 7.7 phút
+================================================================================

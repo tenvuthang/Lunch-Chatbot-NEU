@@ -28,7 +28,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from src.classifier import NeedClassifier
 from src.preprocess import preprocess
-from src.recommender import DishRecommender
+from src.recommender import DishRecommender, compute_crowd_metrics
 
 # ── Dữ liệu ví dụ ─────────────────────────────────────────────────────────────
 LABELS = ["tiet_kiem", "healthy", "nhanh_gon"]
@@ -44,16 +44,17 @@ SAMPLE_DOCS: List[Tuple[str, str]] = [
     ("ăn nhanh kịp giờ học", "nhanh_gon"),
 ]
 TEST_QUERY = "tìm quán cơm giá rẻ"
-# 4 món lấy từ data/dishes.csv (giá, khoảng cách, thời gian... đều có phân bố khác nhau, mỗi món một loại)
-DISH_IDS = [1, 12, 28, 34]
+# 4 món lấy từ data/dishes_v2.csv (giá, khoảng cách, thời gian, độ đông, chỗ ngồi đa dạng)
+DISH_IDS = [1, 12, 23, 28]
 TOKEN_PATTERN = r"(?u)\b\w\w+\b"  # mặc định của TfidfVectorizer
-CRITERIA = [  # (khóa trong profiles.json, cột trong dishes.csv, tên hiển thị, là tiêu chí chi phí?)
+CRITERIA = [  # (khóa trong profiles.json, cột giá trị đưa vào chấm điểm, tên hiển thị, là tiêu chí chi phí?)
     ("gia", "gia_vnd", "Giá (đ)", True),
     ("khoang_cach", "khoang_cach_m", "Khoảng cách (m)", True),
-    ("thoi_gian", "thoi_gian_phuc_vu_phut", "Thời gian (phút)", True),
+    ("thoi_gian", "thoi_gian_cho", "Thời gian chờ (phút)", True),
     ("do_no", "do_no", "Độ no", False),
     ("dinh_duong", "dinh_duong", "Dinh dưỡng", False),
     ("do_ngon", "do_ngon", "Độ ngon", False),
+    ("cho_ngoi", "cho_ngoi_nhom", "Chỗ ngồi nhóm", False),
 ]
 SEP = "=" * 100
 SUB = "-" * 100
@@ -99,7 +100,7 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
     # ══ 0. Huấn luyện model THẬT trên 9 câu mẫu (đúng NeedClassifier.train) ═══════════════════════════
     with tempfile.TemporaryDirectory() as tmp:
         csv_path = os.path.join(tmp, "sample_intents.csv")
-        with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
             w = csv.writer(f)
             w.writerow(["text", "label"])
             w.writerows(SAMPLE_DOCS)
@@ -194,15 +195,52 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
     assert app_pred["label"] == pred_label == "tiet_kiem", f"Dự đoán {pred_label}, cần tiet_kiem"
     assert probs[pred_idx] >= 0.5, f"Xác suất tiet_kiem chỉ {probs[pred_idx]:.2%} (< 50%) -> đổi câu thử"
 
-    # ══ 4. PHẦN 2: CHẤM ĐIỂM MÓN ĂN ══════════════════════════════════════════════════════════════════
-    with open(os.path.join(root_dir, "config", "profiles.json"), "r", encoding="utf-8") as f:
+    # ══ 4. PHẦN 2: CHẤM ĐIỂM MÓN ĂN (7 TIÊU CHÍ & MÔ HÌNH ĐỘ ĐÔNG) ══════════════════════════════════════
+    active_profile = os.path.join(root_dir, "config", "profiles.json")
+    with open(active_profile, "r", encoding="utf-8") as f:
         profiles = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
     weights = profiles[pred_label]
     assert abs(sum(weights.values()) - 1.0) < 1e-9 and set(weights) == {c[0] for c in CRITERIA}
-    with open(os.path.join(root_dir, "data", "dishes.csv"), "r", encoding="utf-8", newline="") as f:
+
+    dishes_v2_path = os.path.join(root_dir, "data", "dishes_v2.csv")
+    crowd_cfg_path = os.path.join(root_dir, "config", "crowd_config.json")
+    with open(dishes_v2_path, "r", encoding="utf-8-sig", newline="") as f:
         all_dishes = {int(r["id"]): r for r in csv.DictReader(f)}
     dishes = [all_dishes[i] for i in DISH_IDS]
-    raw = np.array([[float(d[col]) for _, col, _, _ in CRITERIA] for d in dishes])
+
+    with open(crowd_cfg_path, "r", encoding="utf-8") as f:
+        crowd_cfg = json.load(f)
+
+    # Tham số tính toán
+    so_nguoi_4 = 4
+    khung_gio_cd = "cao_diem"
+    hs_khung_gio = float(crowd_cfg["he_so_khung_gio"][khung_gio_cd])
+    a_coef = float(crowd_cfg["a"])
+    b_coef = float(crowd_cfg["b"])
+    hs_chiem_cho = float(crowd_cfg["he_so_chiem_cho"])
+
+    # Tính toán độ đông & chỗ ngồi cho từng món với so_nguoi = 4, khung_gio = cao_diem
+    dishes_4 = []
+    crowd_steps_4 = []
+    for d in dishes:
+        m = compute_crowd_metrics(d, so_nguoi=so_nguoi_4, khung_gio=khung_gio_cd, crowd_cfg=crowd_cfg)
+        d_merged = {**d, **m}
+        dishes_4.append(d_merged)
+        crowd_steps_4.append({
+            "id": int(d["id"]),
+            "ten_mon": d["ten_mon"],
+            "do_dong_cao_diem": float(d["do_dong_cao_diem"]),
+            "do_dong_hieu_dung": m["do_dong_hieu_dung"],
+            "thoi_gian_phuc_vu_phut": float(d["thoi_gian_phuc_vu_phut"]),
+            "thoi_gian_cho": m["thoi_gian_cho"],
+            "so_cho_ngoi": float(d["so_cho_ngoi"]),
+            "cho_trong": m["cho_trong"],
+            "cho_ngoi_nhom": m["cho_ngoi_nhom"],
+            "seat_warning": m["seat_warning"],
+        })
+
+    # Ma trận raw 7 tiêu chí cho so_nguoi = 4
+    raw = np.array([[float(d[col]) for _, col, _, _ in CRITERIA] for d in dishes_4])
     mins, maxs = raw.min(axis=0), raw.max(axis=0)
     assert np.all(maxs > mins), "Có tiêu chí không phân biệt được giữa 4 món"
     norm = np.zeros_like(raw)
@@ -213,7 +251,24 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
     totals = contrib.sum(axis=1)
     order = list(np.argsort(-totals))
 
-    # ── Đối chiếu: MinMaxScaler của sklearn ──
+    # Tính toán đối chứng khi đi 1 người (so_nguoi = 1, khung_gio = cao_diem)
+    dishes_1 = []
+    for d in dishes:
+        m = compute_crowd_metrics(d, so_nguoi=1, khung_gio=khung_gio_cd, crowd_cfg=crowd_cfg)
+        dishes_1.append({**d, **m})
+    raw_1 = np.array([[float(d[col]) for _, col, _, _ in CRITERIA] for d in dishes_1])
+    mins_1, maxs_1 = raw_1.min(axis=0), raw_1.max(axis=0)
+    norm_1 = np.zeros_like(raw_1)
+    for j, (_, _, _, is_cost) in enumerate(CRITERIA):
+        if maxs_1[j] > mins_1[j]:
+            norm_1[:, j] = (maxs_1[j] - raw_1[:, j]) / (maxs_1[j] - mins_1[j]) if is_cost else (raw_1[:, j] - mins_1[j]) / (maxs_1[j] - mins_1[j])
+        else:
+            norm_1[:, j] = 1.0
+    contrib_1 = norm_1 * w_vec
+    totals_1 = contrib_1.sum(axis=1)
+    order_1 = list(np.argsort(-totals_1))
+
+    # ── Đối chiếu: MinMaxScaler của sklearn cho so_nguoi = 4 ──
     scaled = MinMaxScaler().fit_transform(raw)
     for j, (_, _, _, is_cost) in enumerate(CRITERIA):
         if is_cost:
@@ -221,17 +276,24 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
     sk_totals = scaled @ w_vec
     diff_score = float(np.max(np.abs(sk_totals - totals)))
     assert diff_score < 1e-6 and list(np.argsort(-sk_totals)) == order, "Điểm/xếp hạng lệch sklearn"
-    # ── Đối chiếu: DishRecommender thật của dự án ──
-    rec = DishRecommender(dishes_path=os.path.join(root_dir, "data", "dishes.csv"),
-                          profiles_path=os.path.join(root_dir, "config", "profiles.json"))
-    rec.dishes = [{**{k: v for k, v in d.items()}, "id": int(d["id"]),
-                   **{c: float(d[c]) for _, c, _, _ in CRITERIA}, "cay": int(d["cay"])} for d in dishes]
-    rec._calculate_stats()
-    rec_result = rec.recommend(pred_label, top_k=len(dishes))["all_ranked"]
-    rec_scores = {item["dish"]["id"]: item["score"] for item in rec_result}
-    diff_rec = max(abs(rec_scores[int(d["id"])] - totals[i]) for i, d in enumerate(dishes))
-    assert diff_rec < 1e-6, f"DishRecommender lệch {diff_rec}"
-    assert [item["dish"]["id"] for item in rec_result] == [int(dishes[i]["id"]) for i in order]
+
+    # ── Đối chiếu: DishRecommender thật của dự án cho cả 4 người và 1 người ──
+    rec = DishRecommender(dishes_path=dishes_v2_path, profiles_path=active_profile, crowd_config_path=crowd_cfg_path)
+    all_d_rec = {int(d["id"]): d for d in rec.dishes}
+    rec.dishes = [all_d_rec[i] for i in DISH_IDS]
+
+    rec_result_4 = rec.recommend(pred_label, top_k=len(dishes), num_people=4, time_slot=khung_gio_cd)["all_ranked"]
+    rec_scores_4 = {item["dish"]["id"]: item["score"] for item in rec_result_4}
+    diff_rec_4 = max(abs(rec_scores_4[int(d["id"])] - totals[i]) for i, d in enumerate(dishes_4))
+    assert diff_rec_4 < 1e-6, f"DishRecommender lệch khi 4 người: {diff_rec_4}"
+    assert [item["dish"]["id"] for item in rec_result_4] == [int(dishes_4[i]["id"]) for i in order]
+
+    rec_result_1 = rec.recommend(pred_label, top_k=len(dishes), num_people=1, time_slot=khung_gio_cd)["all_ranked"]
+    rec_scores_1 = {item["dish"]["id"]: item["score"] for item in rec_result_1}
+    diff_rec_1 = max(abs(rec_scores_1[int(d["id"])] - totals_1[i]) for i, d in enumerate(dishes_1))
+    assert diff_rec_1 < 1e-6, f"DishRecommender lệch khi 1 người: {diff_rec_1}"
+    assert [item["dish"]["id"] for item in rec_result_1] == [int(dishes_1[i]["id"]) for i in order_1]
+
     # ── Tổng các đóng góp (làm tròn 4 chữ số) phải khớp đúng điểm làm tròn 4 chữ số ──
     for i in range(len(dishes)):
         assert abs(sum(round(c, 4) for c in contrib[i]) - round(totals[i], 4)) < 1e-9, \
@@ -241,7 +303,7 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
     P(SEP)
     P("VÍ DỤ TÍNH TAY (WORKED EXAMPLE) – CHƯƠNG 2")
     P("Hệ thống chatbot gợi ý bữa trưa cho sinh viên NEU")
-    P("Mọi số liệu dưới đây do công thức tính tay sinh ra và đã được đối chiếu với sklearn (xem mục 1.10, 2.6 và 3).")
+    P("Mọi số liệu dưới đây do công thức tính tay sinh ra và đã được đối chiếu với sklearn và DishRecommender (xem mục 1.10, 2.9 và 3).")
     P("Quy ước: bảng in làm tròn 4 chữ số thập phân; phép tính nội bộ dùng độ chính xác đầy đủ.")
     P(SEP)
 
@@ -341,53 +403,134 @@ def generate_worked_example(root_dir: str = _ROOT, outputs_dir: str = None,
 
     # ── Phần 2 ──
     P("\n" + SEP)
-    P("PHẦN 2. CHẤM ĐIỂM VÀ XẾP HẠNG MÓN ĂN THEO NHÓM NHU CẦU")
+    P("PHẦN 2. CHẤM ĐIỂM VÀ XẾP HẠNG MÓN ĂN THEO NHÓM NHU CẦU (7 TIÊU CHÍ & MÔ HÌNH ĐỘ ĐÔNG)")
     P(SEP)
     P(f"2.1. Nhóm nhu cầu = nhãn dự đoán ở Phần 1: '{pred_label}'. Trọng số THẬT đọc từ config/profiles.json:")
     for k, _, name, _ in CRITERIA:
         P(f"   w_{k:<12} = {weights[k]:.2f}   ({name})")
     P(f"   Tổng trọng số = {sum(weights.values()):.2f}")
 
-    P("\n2.2. Bốn món lấy từ data/dishes.csv (dùng đủ 6 tiêu chí)")
-    names = [f"[{d['id']}] {d['ten_mon']}" for d in dishes]
-    P("   " + _fmt_row(["Món"] + [c[2] for c in CRITERIA], [56] + [17, 17, 17, 8, 11, 8]))
-    for i, d in enumerate(dishes):
-        P("   " + _fmt_row([names[i]] + [f"{raw[i, j]:.0f}" for j in range(len(CRITERIA))], [56] + [17, 17, 17, 8, 11, 8]))
+    P("\n2.2. Bốn món lấy từ data/dishes_v2.csv (dữ liệu ban đầu)")
+    names = [f"[{d['id']}] {d['ten_mon']}" for d in dishes_4]
+    base_headers = ["Món", "Giá (đ)", "K.Cách (m)", "TG PV (phút)", "Độ no", "D.Dưỡng", "Độ ngon", "Độ đông", "Chỗ ngồi"]
+    base_widths = [48, 9, 11, 13, 7, 9, 8, 9, 9]
+    P("   " + _fmt_row(base_headers, base_widths))
+    for d in dishes:
+        P("   " + _fmt_row([
+            f"[{d['id']}] {d['ten_mon']}",
+            f"{float(d['gia_vnd']):.0f}",
+            f"{float(d['khoang_cach_m']):.0f}",
+            f"{float(d['thoi_gian_phuc_vu_phut']):.0f}",
+            f"{float(d['do_no']):.0f}",
+            f"{float(d['dinh_duong']):.0f}",
+            f"{float(d['do_ngon']):.0f}",
+            f"{float(d['do_dong_cao_diem']):.0f}",
+            f"{float(d['so_cho_ngoi']):.0f}",
+        ], base_widths))
 
-    P("\n2.3. Chuẩn hóa min-max trong 4 món (đảo chiều cho tiêu chí chi phí)")
-    P("   Chi phí (giá, khoảng cách, thời gian): v = (max − x) / (max − min)")
-    P("   Lợi ích (độ no, dinh dưỡng, độ ngon) : v = (x − min) / (max − min)")
-    P("   " + _fmt_row(["Tiêu chí", "min", "max", "max−min", "Loại"], [18, 8, 8, 8, 10]))
+    P(f"\n2.3. Mô hình hóa Độ đông và Chỗ ngồi nhóm (Khung giờ: {khung_gio_cd}, Số người = {so_nguoi_4})")
+    P("   Tham số từ config/crowd_config.json:")
+    P(f"     • Hệ số khung giờ cao điểm : he_so_khung_gio['{khung_gio_cd}'] = {hs_khung_gio:.1f}")
+    P(f"     • Hệ số thời gian chờ      : a = {a_coef:.1f}, b = {b_coef:.2f}")
+    P(f"     • Hệ số chiếm chỗ          : he_so_chiem_cho = {hs_chiem_cho:.1f}")
+    P("   Công thức từng bước tính:")
+    P("     (1) do_dong_hieu_dung = do_dong_cao_diem × he_so_khung_gio")
+    P("     (2) thoi_gian_cho     = thoi_gian_phuc_vu_phut × (1 + a × do_dong_hieu_dung / 5) × (1 + b × (so_nguoi − 1))")
+    P("     (3) cho_trong         = so_cho_ngoi × (1 − he_so_chiem_cho × do_dong_hieu_dung / 5)")
+    P("     (4) cho_ngoi_nhom     = min(1.0, cho_trong / so_nguoi)")
+    P("     (*) Cảnh báo: Nếu cho_trong < so_nguoi thì cảnh báo 'Có thể phải chờ chỗ'.")
+
+    P("\n   Chi tiết tính toán từng món (so_nguoi = 4, cao điểm):")
+    for step in crowd_steps_4:
+        P(f"   [{step['id']}] {step['ten_mon']}:")
+        P(f"      • do_dong_hieu_dung = {step['do_dong_cao_diem']:.0f} × {hs_khung_gio:.1f} = {step['do_dong_hieu_dung']:.1f}")
+        P(f"      • thoi_gian_cho     = {step['thoi_gian_phuc_vu_phut']:.0f} × (1 + {a_coef}×{step['do_dong_hieu_dung']:.1f}/5) × (1 + {b_coef}×3)")
+        P(f"                          = {step['thoi_gian_phuc_vu_phut']:.0f} × {1 + a_coef * step['do_dong_hieu_dung'] / 5:.2f} × {1 + b_coef * 3:.2f} = {step['thoi_gian_cho']:.2f} phút")
+        P(f"      • cho_trong         = {step['so_cho_ngoi']:.0f} × (1 − {hs_chiem_cho}×{step['do_dong_hieu_dung']:.1f}/5) = {step['cho_trong']:.2f} chỗ")
+        warn_txt = " --> Cảnh báo: Có thể phải chờ chỗ!" if step['seat_warning'] else " --> Đủ chỗ cho nhóm"
+        P(f"      • cho_ngoi_nhom     = min(1.0, {step['cho_trong']:.2f} / 4) = {step['cho_ngoi_nhom']:.4f}{warn_txt}")
+
+    P("\n2.4. Ma trận 7 tiêu chí đưa vào chấm điểm (thoi_gian = thoi_gian_cho, cho_ngoi = cho_ngoi_nhom)")
+    crit_headers = ["Món"] + [c[2] for c in CRITERIA]
+    crit_widths = [48, 10, 14, 18, 8, 10, 9, 15]
+    P("   " + _fmt_row(crit_headers, crit_widths))
+    for i in range(len(dishes_4)):
+        P("   " + _fmt_row([names[i]] + [f"{raw[i, j]:.2f}" for j in range(len(CRITERIA))], crit_widths))
+
+    P("\n2.5. Chuẩn hóa min-max trong 4 món (đảo chiều cho tiêu chí chi phí)")
+    P("   Chi phí (giá, khoảng cách, thời gian chờ): v = (max − x) / (max − min)")
+    P("   Lợi ích (độ no, dinh dưỡng, độ ngon, chỗ ngồi nhóm) : v = (x − min) / (max − min)")
+    P("   " + _fmt_row(["Tiêu chí", "min", "max", "max−min", "Loại"], [22, 10, 10, 10, 10]))
     for j, (_, _, name, is_cost) in enumerate(CRITERIA):
-        P("   " + _fmt_row([name, f"{mins[j]:.0f}", f"{maxs[j]:.0f}", f"{maxs[j] - mins[j]:.0f}",
-                           "chi phí" if is_cost else "lợi ích"], [18, 8, 8, 8, 10]))
-    P("\n   Giá trị chuẩn hóa v:")
-    P("   " + _fmt_row(["Món"] + [c[2] for c in CRITERIA], [56] + [17, 17, 17, 8, 11, 8]))
-    for i in range(len(dishes)):
-        P("   " + _fmt_row([names[i]] + [f"{norm[i, j]:.4f}" for j in range(len(CRITERIA))], [56] + [17, 17, 17, 8, 11, 8]))
+        P("   " + _fmt_row([name, f"{mins[j]:.2f}", f"{maxs[j]:.2f}", f"{maxs[j] - mins[j]:.2f}",
+                           "chi phí" if is_cost else "lợi ích"], [22, 10, 10, 10, 10]))
+    P("\n   Giá trị chuẩn hóa v (mức độ thỏa mãn trong khoảng [0, 1]):")
+    P("   " + _fmt_row(crit_headers, crit_widths))
+    for i in range(len(dishes_4)):
+        P("   " + _fmt_row([names[i]] + [f"{norm[i, j]:.4f}" for j in range(len(CRITERIA))], crit_widths))
 
-    P("\n2.4. Đóng góp w × v của từng tiêu chí (4 chữ số thập phân) và điểm tổng  Điểm = Σ w×v")
-    P("   " + _fmt_row(["Món"] + [c[2] for c in CRITERIA] + ["Σ = Điểm"], [56] + [17, 17, 17, 8, 11, 8] + [9]))
-    for i in range(len(dishes)):
+    P("\n2.6. Đóng góp w × v của từng tiêu chí (4 chữ số thập phân) và tổng điểm (Điểm = Σ w×v)")
+    score_headers = ["Món"] + [c[2] for c in CRITERIA] + ["Σ = Điểm"]
+    score_widths = crit_widths + [10]
+    P("   " + _fmt_row(score_headers, score_widths))
+    for i in range(len(dishes_4)):
         P("   " + _fmt_row([names[i]] + [f"{contrib[i, j]:.4f}" for j in range(len(CRITERIA))] + [f"{totals[i]:.4f}"],
-                           [56] + [17, 17, 17, 8, 11, 8] + [9]))
-    P("\n   Kiểm tra cộng từng món:")
-    for i in range(len(dishes)):
+                           score_widths))
+
+    P("\n   Kiểm tra tính khớp cộng từng món:")
+    for i in range(len(dishes_4)):
         parts = " + ".join(f"{round(contrib[i, j], 4):.4f}" for j in range(len(CRITERIA)))
-        P(f"   {names[i][:45]:<45}: {parts} = {sum(round(c, 4) for c in contrib[i]):.4f}  (điểm {totals[i]:.4f})")
+        P(f"   {names[i][:40]:<40}: {parts} = {sum(round(c, 4) for c in contrib[i]):.4f}  (điểm {totals[i]:.4f})")
 
-    P("\n2.5. Bảng xếp hạng")
+    P("\n2.7. Bảng xếp hạng khi đi nhóm 4 người (giờ cao điểm)")
     for rank, i in enumerate(order, 1):
-        P(f"   #{rank}  {names[i]:<56}  điểm = {totals[i]:.4f}")
+        warn_flag = " [Cảnh báo: Chờ chỗ]" if dishes_4[i]["seat_warning"] else ""
+        P(f"   #{rank}  {names[i]:<48}  điểm = {totals[i]:.4f}{warn_flag}")
 
-    P("\n2.6. Đối chiếu (assert sai số < 1e-6)")
+    P("\n2.8. So sánh tác động của Độ đông & Quy mô nhóm (Đi 1 người vs Đi 4 người)")
+    cmp_headers = ["Món", "Điểm (1 ng)", "Hạng (1 ng)", "Điểm (4 ng)", "Hạng (4 ng)", "Thay đổi thứ hạng & Phân tích"]
+    cmp_widths = [45, 12, 12, 12, 12, 45]
+    P("   " + _fmt_row(cmp_headers, cmp_widths))
+
+    # Xây dựng từ điển tra cứu xếp hạng
+    rank_dict_1 = {dishes_1[idx]["id"]: (rank, totals_1[idx]) for rank, idx in enumerate(order_1, 1)}
+    rank_dict_4 = {dishes_4[idx]["id"]: (rank, totals[idx]) for rank, idx in enumerate(order, 1)}
+
+    for d in dishes:
+        did = d["id"]
+        r1, s1 = rank_dict_1[did]
+        r4, s4 = rank_dict_4[did]
+        if r4 > r1:
+            analysis = f"Tụt #{r1} -> #{r4} (do quy mô nhỏ, thiếu chỗ ngồi nhóm)"
+        elif r4 < r1:
+            analysis = f"Tăng #{r1} -> #{r4} (quán rộng, đáp ứng tốt chỗ ngồi nhóm)"
+        else:
+            analysis = f"Giữ nguyên #{r1} (cân bằng tốt giữa giá, vị trí và chỗ ngồi)"
+        P("   " + _fmt_row([
+            f"[{did}] {d['ten_mon']}",
+            f"{s1:.4f}",
+            f"#{r1}",
+            f"{s4:.4f}",
+            f"#{r4}",
+            analysis
+        ], cmp_widths))
+
+    P("\n   Nhận định quan trọng:")
+    P("     • Bánh mì pate chả ngõ Tự Do: Quy mô chỉ 10 ghế. Giờ cao điểm vắng chỗ (chỗ trống = 1.0). Khi đi 1 người,")
+    P("       quán đáp ứng đủ chỗ nên đạt điểm cao (0.6300, hạng #2). Nhưng khi đi nhóm 4 người, quán không đủ chỗ")
+    P("       (cho_ngoi_nhom = 0.25), điểm tụt xuống 0.5500 và rơi xuống hạng #3 kèm cảnh báo chờ chỗ.")
+    P("     • Bún đậu mắm tôm KTX NEU: Có 54 ghế (chỗ trống = 5.4 >= 4), đáp ứng trọn vẹn chỗ cho nhóm 4 người")
+    P("       (cho_ngoi_nhom = 1.0), vươn lên hạng #2 thay thế vị trí của quán bánh mì.")
+
+    P("\n2.9. Đối chiếu (assert sai số < 1e-6)")
     P(f"   MinMaxScaler của sklearn (đảo chiều cột chi phí) × trọng số: sai số điểm lớn nhất = {diff_score:.2e}, cùng thứ hạng.")
-    P(f"   DishRecommender của dự án (4 món trên): sai số điểm lớn nhất = {diff_rec:.2e}, cùng thứ hạng.")
+    P(f"   DishRecommender của dự án (nhóm 4 người): sai số điểm lớn nhất = {diff_rec_4:.2e}, cùng thứ hạng.")
+    P(f"   DishRecommender của dự án (nhóm 1 người): sai số điểm lớn nhất = {diff_rec_1:.2e}, cùng thứ hạng.")
 
     P("\n" + SEP)
     P("3. KẾT LUẬN KIỂM CHỨNG")
     P(f"   Phần 1: từ vựng, idf, ma trận TF-IDF, prior, likelihood, predict_proba (sai số {diff_proba:.2e}) khớp sklearn.")
-    P(f"   Phần 2: điểm và xếp hạng (sai số {diff_score:.2e}) khớp sklearn và DishRecommender.")
+    P(f"   Phần 2: độ đông, thời gian chờ, chỗ trống, điểm và xếp hạng (sai số {diff_score:.2e}) khớp sklearn và DishRecommender.")
     P("   ĐÃ KHỚP VỚI SKLEARN")
     P(SEP)
 

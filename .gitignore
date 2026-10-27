@@ -5,6 +5,7 @@ __pycache__/
 
 # Caches and test artifacts
 .pytest_cache/
+.ipynb_checkpoints/
 
 # Virtual environments
 .venv/
@@ -22,6 +23,18 @@ env/
 *.7z
 *.tar.gz
 
+# Local report directory (never pushed)
+report/
+
+# Temporary / backup / cleanup files
+_cleanup_*
+*.bak
+*.tmp
+*.log
+*_old
+*_copy
+*_backup
+
 # Operating System files
 .DS_Store
 Thumbs.db
@@ -29,11 +42,16 @@ Thumbs.db
 # Explicitly ensure required project assets are tracked
 !data/
 !data/*.csv
+!data/legacy/
+!data/legacy/*.csv
 !config/
 !config/*.json
 !outputs/
 !outputs/*.png
 !outputs/*.csv
 !outputs/*.txt
+!outputs/*.json
 !outputs/.gitkeep
 !outputs/classifier_model.joblib
+!tests/
+!tools/

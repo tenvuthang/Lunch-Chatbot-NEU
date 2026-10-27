@@ -38,9 +38,9 @@ def test_worked_example_generation_and_content(tmp_path):
     assert TEST_QUERY in content
     assert "DỰ ĐOÁN: 'tiet_kiem'" in content
 
-    # Yêu cầu 3: 6 tiêu chí, 4 món từ dishes.csv, trọng số thật từ profiles.json
+    # Yêu cầu 3: 7 tiêu chí, 4 món từ dishes_v2.csv, trọng số thật từ profiles.json
     assert len(DISH_IDS) == 4
-    for w_name in ["w_gia", "w_khoang_cach", "w_thoi_gian", "w_do_no", "w_dinh_duong", "w_do_ngon"]:
+    for w_name in ["w_gia", "w_khoang_cach", "w_thoi_gian", "w_do_no", "w_dinh_duong", "w_do_ngon", "w_cho_ngoi"]:
         assert w_name in content
 
     # Yêu cầu 4: Khớp với sklearn và in dòng xác nhận

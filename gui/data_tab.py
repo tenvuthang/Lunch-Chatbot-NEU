@@ -1,6 +1,7 @@
 """
 Tab "Quản lý dữ liệu" của giao diện PyQt6:
-  (1) Bảng xem/thêm/sửa/xóa món ăn -> lưu vào data/dishes.csv (có kiểm tra hợp lệ).
+  (1) Bảng xem/thêm/sửa/xóa món ăn -> lưu vào data/dishes_v2.csv (có kiểm tra hợp lệ 15 cột, gồm
+      do_dong_cao_diem 1-5, so_cho_ngoi > 0, nguon_du_lieu ∈ {mô phỏng, quan sát, khảo sát}).
   (2) Form thêm câu mẫu mới vào data/intents.csv với nhãn chọn từ danh sách.
   (3) Nút "Huấn luyện lại" để cập nhật mô hình ngay sau khi sửa dữ liệu.
 Logic đọc/ghi/kiểm tra nằm ở src/data_manager.py; lớp này chỉ lo giao diện.
@@ -13,13 +14,17 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QPushButton, QLineEdit,
     QComboBox, QSpinBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView, QMessageBox, QFormLayout, QGridLayout, QProgressBar,
+    QAbstractItemView, QMessageBox, QGridLayout, QProgressBar,
 )
 
 from src import data_manager as dm
+from src.config import ALLOWED_DATA_SOURCES, DEFAULT_DO_DONG_CAO_DIEM, DEFAULT_SO_CHO_NGOI, DEFAULT_NGUON_DU_LIEU
 
-_TABLE_HEADERS = ["ID", "Tên món", "Loại", "Giá (đ)", "Khoảng cách (m)", "Thời gian (p)",
-                  "Độ no", "Dinh dưỡng", "Độ ngon", "Cay", "Mô tả"]
+_TABLE_HEADERS = [
+    "ID", "Tên món", "Loại", "Giá (đ)", "Khoảng cách (m)", "Thời gian (p)",
+    "Độ no", "Dinh dưỡng", "Độ ngon", "Cay", "Chay",
+    "Độ đông (1-5)", "Chỗ ngồi", "Mô tả", "Nguồn",
+]
 
 
 class DataManagerTab(QWidget):
@@ -45,7 +50,7 @@ class DataManagerTab(QWidget):
         root.setSpacing(10)
 
         # (1) Món ăn
-        grp_dish = QGroupBox("🍽️  Danh sách món ăn (data/dishes.csv)")
+        grp_dish = QGroupBox("🍽️  Danh sách món ăn (data/dishes_v2.csv)")
         dish_lay = QVBoxLayout(grp_dish)
         dish_lay.setContentsMargins(8, 14, 8, 8)
 
@@ -56,11 +61,11 @@ class DataManagerTab(QWidget):
         self.tbl_dishes.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tbl_dishes.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.tbl_dishes.setAlternatingRowColors(True)
-        self.tbl_dishes.setMinimumHeight(190)
+        self.tbl_dishes.setMinimumHeight(185)
         header = self.tbl_dishes.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(10, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(13, QHeaderView.ResizeMode.Stretch)
         self.tbl_dishes.itemSelectionChanged.connect(self._on_row_selected)
         dish_lay.addWidget(self.tbl_dishes)
 
@@ -78,7 +83,15 @@ class DataManagerTab(QWidget):
         self.in_full = self._spin(1, 5, 3)
         self.in_nutri = self._spin(1, 5, 3)
         self.in_taste = self._spin(1, 5, 3)
+        self.in_crowd = self._spin(1, 5, DEFAULT_DO_DONG_CAO_DIEM)
+        self.in_crowd.setToolTip("Mức độ đông giờ cao điểm trưa (1 = rất vắng, 5 = rất đông)")
+        self.in_seats = self._spin(1, 1000, DEFAULT_SO_CHO_NGOI, step=5, suffix=" chỗ")
+        self.in_seats.setToolTip("Tổng số chỗ ngồi của quán (> 0)")
+        self.in_source = QComboBox()
+        for src_opt in ALLOWED_DATA_SOURCES:
+            self.in_source.addItem(src_opt, src_opt)
         self.in_spicy = QCheckBox("Món cay")
+        self.in_veg = QCheckBox("Món chay")
         self.in_desc = QLineEdit()
         self.in_desc.setPlaceholderText("Mô tả ngắn về món / quán")
 
@@ -98,9 +111,16 @@ class DataManagerTab(QWidget):
         form.addWidget(self.in_nutri, 2, 3)
         form.addWidget(QLabel("Độ ngon (1-5):"), 2, 4)
         form.addWidget(self.in_taste, 2, 5)
-        form.addWidget(self.in_spicy, 3, 0, 1, 2)
-        form.addWidget(QLabel("Mô tả:"), 3, 2)
-        form.addWidget(self.in_desc, 3, 3, 1, 3)
+        form.addWidget(QLabel("Độ đông (1-5):"), 3, 0)
+        form.addWidget(self.in_crowd, 3, 1)
+        form.addWidget(QLabel("Số chỗ ngồi:"), 3, 2)
+        form.addWidget(self.in_seats, 3, 3)
+        form.addWidget(QLabel("Nguồn dữ liệu:"), 3, 4)
+        form.addWidget(self.in_source, 3, 5)
+        form.addWidget(self.in_spicy, 4, 0)
+        form.addWidget(self.in_veg, 4, 1)
+        form.addWidget(QLabel("Mô tả:"), 4, 2)
+        form.addWidget(self.in_desc, 4, 3, 1, 3)
         dish_lay.addLayout(form)
 
         btn_row = QHBoxLayout()
@@ -184,7 +204,7 @@ class DataManagerTab(QWidget):
 
     # ── Món ăn: đọc dữ liệu / hiển thị ───────────────────────────────────────
     def reload_dishes(self) -> None:
-        """Đọc lại dishes.csv và hiển thị lên bảng; báo lỗi thân thiện nếu thiếu/hỏng file."""
+        """Đọc lại dishes CSV và hiển thị lên bảng; báo lỗi thân thiện nếu thiếu/hỏng file."""
         try:
             dishes = dm.load_dishes(self.dishes_path)
         except (FileNotFoundError, ValueError) as e:
@@ -198,12 +218,26 @@ class DataManagerTab(QWidget):
         types = set()
         for r, d in enumerate(dishes):
             types.add(d["loai"])
-            values = [d["id"], d["ten_mon"], d["loai"], f"{int(d['gia_vnd']):,}" if d["gia_vnd"].isdigit() else d["gia_vnd"],
-                      d["khoang_cach_m"], d["thoi_gian_phuc_vu_phut"], d["do_no"], d["dinh_duong"],
-                      d["do_ngon"], "Có" if d["cay"] == "1" else "Không", d["mo_ta"]]
+            values = [
+                d["id"],
+                d["ten_mon"],
+                d["loai"],
+                f"{int(d['gia_vnd']):,}" if d["gia_vnd"].isdigit() else d["gia_vnd"],
+                d["khoang_cach_m"],
+                d["thoi_gian_phuc_vu_phut"],
+                d["do_no"],
+                d["dinh_duong"],
+                d["do_ngon"],
+                "Có" if d["cay"] == "1" else "Không",
+                "Có" if d.get("chay", "0") == "1" else "Không",
+                d.get("do_dong_cao_diem", str(DEFAULT_DO_DONG_CAO_DIEM)),
+                d.get("so_cho_ngoi", str(DEFAULT_SO_CHO_NGOI)),
+                d["mo_ta"],
+                d.get("nguon_du_lieu", DEFAULT_NGUON_DU_LIEU),
+            ]
             for c, v in enumerate(values):
                 item = QTableWidgetItem(str(v))
-                if c not in (1, 10):
+                if c not in (1, 13):
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.tbl_dishes.setItem(r, c, item)
 
@@ -242,7 +276,14 @@ class DataManagerTab(QWidget):
         self.in_nutri.setValue(int(text(7)))
         self.in_taste.setValue(int(text(8)))
         self.in_spicy.setChecked(text(9) == "Có")
-        self.in_desc.setText(text(10))
+        self.in_veg.setChecked(text(10) == "Có")
+        self.in_crowd.setValue(int(text(11)))
+        self.in_seats.setValue(int(text(12)))
+        self.in_desc.setText(text(13))
+        src_val = text(14)
+        idx = self.in_source.findData(src_val)
+        if idx >= 0:
+            self.in_source.setCurrentIndex(idx)
         self._update_button_state()
 
     def _clear_form(self) -> None:
@@ -256,7 +297,11 @@ class DataManagerTab(QWidget):
         self.in_full.setValue(3)
         self.in_nutri.setValue(3)
         self.in_taste.setValue(3)
+        self.in_crowd.setValue(DEFAULT_DO_DONG_CAO_DIEM)
+        self.in_seats.setValue(DEFAULT_SO_CHO_NGOI)
+        self.in_source.setCurrentIndex(0)
         self.in_spicy.setChecked(False)
+        self.in_veg.setChecked(False)
         self.in_desc.clear()
         self._update_button_state()
 
@@ -271,7 +316,11 @@ class DataManagerTab(QWidget):
             "dinh_duong": self.in_nutri.value(),
             "do_ngon": self.in_taste.value(),
             "cay": 1 if self.in_spicy.isChecked() else 0,
+            "chay": 1 if self.in_veg.isChecked() else 0,
+            "do_dong_cao_diem": self.in_crowd.value(),
+            "so_cho_ngoi": self.in_seats.value(),
             "mo_ta": self.in_desc.text(),
+            "nguon_du_lieu": self.in_source.currentData() or self.in_source.currentText(),
         }
 
     # ── Món ăn: thêm / sửa / xóa ─────────────────────────────────────────────
@@ -305,7 +354,7 @@ class DataManagerTab(QWidget):
             return
         name = self.in_name.text()
         answer = QMessageBox.question(
-            self, "Xác nhận xóa", f"Xóa món '{name}' khỏi dishes.csv?",
+            self, "Xác nhận xóa", f"Xóa món '{name}' khỏi danh sách món ăn?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

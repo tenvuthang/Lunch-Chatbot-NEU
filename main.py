@@ -6,7 +6,6 @@
 """
 
 import argparse
-import csv
 import json
 import math
 import os
@@ -25,10 +24,19 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 from src.chatbot import Chatbot
+from src.io_utils import read_csv_dicts
+from src.config import (
+    DEFAULT_DISHES_PATH,
+    DEFAULT_INTENTS_PATH,
+    DEFAULT_TEST_INTENTS_PATH,
+    DEFAULT_PROFILES_PATH,
+    DEFAULT_CROWD_CONFIG_PATH,
+    load_crowd_config,
+)
 
 
 def check_profiles_json(filepath: str) -> dict:
-    """Kiểm tra tính hợp lệ của file config/profiles.json."""
+    """Kiểm tra tính hợp lệ của file config/profiles.json (7 tiêu chí)."""
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Không tìm thấy file: {filepath}")
 
@@ -36,10 +44,10 @@ def check_profiles_json(filepath: str) -> dict:
         profiles = json.load(f)
 
     expected_profiles = ["tiet_kiem", "healthy", "nhanh_gon", "no_bung", "ngon_doi_gio", "can_bang"]
-    expected_criteria = ["gia", "khoang_cach", "thoi_gian", "do_no", "dinh_duong", "do_ngon"]
+    expected_criteria = ["gia", "khoang_cach", "thoi_gian", "do_no", "dinh_duong", "do_ngon", "cho_ngoi"]
 
     print("=" * 80)
-    print("1. KIỂM TRA FILE CẤU HÌNH (config/profiles.json)")
+    print("1. KIỂM TRA FILE CẤU HÌNH (config/profiles.json & config/crowd_config.json)")
     print("=" * 80)
 
     for p in expected_profiles:
@@ -54,7 +62,10 @@ def check_profiles_json(filepath: str) -> dict:
             raise ValueError(f"Tổng trọng số của profile '{p}' = {total_weight} != 1.0")
         print(f"  [OK] Profile '{p:<13}': Tổng trọng số = {total_weight:.2f} {weights}")
 
-    print("  -> File config/profiles.json hoàn toàn HỢP LỆ!\n")
+    crowd_cfg = load_crowd_config(DEFAULT_CROWD_CONFIG_PATH)
+    print(f"  [OK] Cấu hình độ đông (crowd_config.json): a={crowd_cfg['a']}, b={crowd_cfg['b']}, "
+          f"he_so_chiem_cho={crowd_cfg['he_so_chiem_cho']}, he_so_khung_gio={crowd_cfg['he_so_khung_gio']}")
+    print("  -> File config/profiles.json & config/crowd_config.json hoàn toàn HỢP LỆ!\n")
     return profiles
 
 
@@ -71,19 +82,15 @@ def check_intents_csv(intents_path: str, test_intents_path: str):
 
     train_counts = Counter()
     train_texts = set()
-    with open(intents_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            train_counts[row["label"]] += 1
-            train_texts.add(row["text"].strip())
+    for row in read_csv_dicts(intents_path):
+        train_counts[row["label"]] += 1
+        train_texts.add(row["text"].strip())
 
     test_counts = Counter()
     test_texts = set()
-    with open(test_intents_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            test_counts[row["label"]] += 1
-            test_texts.add(row["text"].strip())
+    for row in read_csv_dicts(test_intents_path):
+        test_counts[row["label"]] += 1
+        test_texts.add(row["text"].strip())
 
     overlap = train_texts.intersection(test_texts)
     if overlap:
@@ -114,7 +121,7 @@ def check_intents_csv(intents_path: str, test_intents_path: str):
 def check_dishes_csv(dishes_path: str):
     """Kiểm tra và in thống kê chi tiết dữ liệu món ăn."""
     print("=" * 80)
-    print("3. THỐNG KÊ DỮ LIỆU MÓN ĂN (data/dishes.csv)")
+    print(f"3. THỐNG KÊ DỮ LIỆU MÓN ĂN ({os.path.relpath(dishes_path, current_dir)})")
     print("=" * 80)
 
     expected_cols = [
@@ -123,25 +130,28 @@ def check_dishes_csv(dishes_path: str):
     ]
 
     dishes = []
-    with open(dishes_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
+    raw_rows = read_csv_dicts(dishes_path)
+    if raw_rows:
         for c in expected_cols:
-            if c not in reader.fieldnames:
+            if c not in raw_rows[0]:
                 raise ValueError(f"Thiếu cột '{c}' trong {dishes_path}")
-        for row in reader:
-            dishes.append({
-                "id": int(row["id"]),
-                "ten_mon": row["ten_mon"],
-                "loai": row["loai"],
-                "gia_vnd": int(float(row["gia_vnd"])),
-                "khoang_cach_m": int(float(row["khoang_cach_m"])),
-                "thoi_gian_phuc_vu_phut": int(float(row["thoi_gian_phuc_vu_phut"])),
-                "do_no": int(float(row["do_no"])),
-                "dinh_duong": int(float(row["dinh_duong"])),
-                "do_ngon": int(float(row["do_ngon"])),
-                "cay": int(row["cay"]),
-                "mo_ta": row["mo_ta"]
-            })
+    for row in raw_rows:
+        dishes.append({
+            "id": int(row["id"]),
+            "ten_mon": row["ten_mon"],
+            "loai": row["loai"],
+            "gia_vnd": int(float(row["gia_vnd"])),
+            "khoang_cach_m": int(float(row["khoang_cach_m"])),
+            "thoi_gian_phuc_vu_phut": int(float(row["thoi_gian_phuc_vu_phut"])),
+            "do_no": int(float(row["do_no"])),
+            "dinh_duong": int(float(row["dinh_duong"])),
+            "do_ngon": int(float(row["do_ngon"])),
+            "cay": int(row["cay"]),
+            "chay": int(row.get("chay", 0) or 0),
+            "do_dong_cao_diem": int(float(row.get("do_dong_cao_diem", 3) or 3)),
+            "so_cho_ngoi": int(float(row.get("so_cho_ngoi", 30) or 30)),
+            "mo_ta": row["mo_ta"],
+        })
 
     total_dishes = len(dishes)
     print(f"Tổng số lượng món ăn: {total_dishes} món")
@@ -159,7 +169,10 @@ def check_dishes_csv(dishes_path: str):
     satieties = [d["do_no"] for d in dishes]
     nutritions = [d["dinh_duong"] for d in dishes]
     tastes = [d["do_ngon"] for d in dishes]
+    crowds = [d["do_dong_cao_diem"] for d in dishes]
+    seats = [d["so_cho_ngoi"] for d in dishes]
     spicy_count = sum(1 for d in dishes if d["cay"] == 1)
+    veg_count = sum(1 for d in dishes if d["chay"] == 1)
 
     print("\n* Thống kê các chỉ số cơ bản:")
     print(f"  - Giá món (VND)         : Min = {min(prices):,d}đ | Max = {max(prices):,d}đ | TB = {sum(prices)/total_dishes:,.0f}đ")
@@ -168,7 +181,10 @@ def check_dishes_csv(dishes_path: str):
     print(f"  - Điểm độ no (1-5)      : Min = {min(satieties)} | Max = {max(satieties)} | TB = {sum(satieties)/total_dishes:.2f}")
     print(f"  - Điểm dinh dưỡng (1-5) : Min = {min(nutritions)} | Max = {max(nutritions)} | TB = {sum(nutritions)/total_dishes:.2f}")
     print(f"  - Điểm độ ngon (1-5)    : Min = {min(tastes)} | Max = {max(tastes)} | TB = {sum(tastes)/total_dishes:.2f}")
+    print(f"  - Độ đông cao điểm (1-5): Min = {min(crowds)} | Max = {max(crowds)} | TB = {sum(crowds)/total_dishes:.2f}")
+    print(f"  - Số chỗ ngồi           : Min = {min(seats)} chỗ | Max = {max(seats)} chỗ | TB = {sum(seats)/total_dishes:.1f} chỗ")
     print(f"  - Tỷ lệ món cay         : {spicy_count}/{total_dishes} món ({spicy_count/total_dishes*100:.1f}%)")
+    print(f"  - Tỷ lệ món chay        : {veg_count}/{total_dishes} món ({veg_count/total_dishes*100:.1f}%)")
     print("=" * 80 + "\n")
 
 
@@ -201,15 +217,19 @@ def print_intermediate_results(response: dict):
     # 3. Ràng buộc trích xuất
     c = response["constraints"]
     print(f"\n3. Ràng buộc trích xuất (Constraints):")
-    print(f"   • Ngân sách tối đa: {c['max_price']:,d}đ" if c['max_price'] else "   • Ngân sách tối đa: Không ràng buộc")
+    print(f"   • Ngân sách tối đa: {c['max_price']:,.0f}đ" if c['max_price'] else "   • Ngân sách tối đa: Không ràng buộc")
+    print(f"   • Số người đi ăn: {c.get('num_people', 1)} người ({c.get('sources', {}).get('num_people', '')})")
+    print(f"   • Khung giờ đi ăn: {c.get('time_slot', 'cao_diem')} ({c.get('sources', {}).get('time_slot', '')})")
+    print(f"   • Ưu tiên quán vắng: {'Có (nhân đôi hệ số a)' if c.get('prefer_quiet') else 'Không'}")
     print(f"   • Loại trừ đồ cay: {'Có (không ăn cay)' if c['exclude_spicy'] else 'Không'}")
+    print(f"   • Chỉ món chay: {'Có (chỉ ăn chay)' if c.get('vegetarian_only') else 'Không'}")
     print(f"   • Món/loại loại trừ: {c['exclude_types'] if c['exclude_types'] else 'Không'}")
     print(f"   • Khớp chuỗi: {c['intermediate']}")
 
     # 4. Gợi ý món ăn
     rec = response["recommendation"]
     if rec:
-        print(f"\n4. Gợi ý đa tiêu chí (Recommender):")
+        print(f"\n4. Gợi ý đa tiêu chí (Recommender - 7 tiêu chí):")
         print(f"   • Profile áp dụng: '{rec['profile_used']}'")
         weights_str = ", ".join([f"{k}: {v:.2f}" for k, v in rec['weights_used'].items()])
         print(f"   • Trọng số tiêu chí: [{weights_str}]")
@@ -219,7 +239,11 @@ def print_intermediate_results(response: dict):
             for idx, item in enumerate(rec["top_k"], 1):
                 d = item["dish"]
                 c_str = ", ".join([f"{k}={v:.3f}" for k, v in item['contributions'].items()])
-                print(f"     {idx}. {d['ten_mon']} (Điểm: {item['score']:.4f}) -> Đóng góp: [{c_str}]")
+                print(
+                    f"     {idx}. {d['ten_mon']} (Điểm: {item['score']:.4f}, "
+                    f"TG chờ ~{item.get('thoi_gian_cho', 0):.1f}p, "
+                    f"Chỗ trống ~{item.get('cho_trong', 0):.1f}/{d.get('so_cho_ngoi', 30)}) -> Đóng góp: [{c_str}]"
+                )
     print("─" * 70 + "\n")
 
 
@@ -228,7 +252,7 @@ def run_cli_interactive():
     print("\n" + "=" * 80)
     print("   🤖 CHATBOT TƯ VẤN ĂN TRƯA ĐẠI HỌC KINH TẾ QUỐC DÂN (NEU) - CHẾ ĐỘ CLI 🍜")
     print("=" * 80)
-    print("• Nhập câu hỏi tự nhiên về bữa trưa của bạn (ví dụ: 'ăn gì rẻ dưới 35k không cay ktx neu')")
+    print("• Nhập câu hỏi tự nhiên về bữa trưa của bạn (ví dụ: 'đi 4 người ăn gì rẻ dưới 35k không cay')")
     print("• Nhập 'exit', 'quit' hoặc 'q' để kết thúc chương trình.\n")
 
     bot = Chatbot()
@@ -261,7 +285,6 @@ def main():
     parser.add_argument("--chat", action="store_true", help="Bắt đầu chế độ trò chuyện CLI tương tác")
     parser.add_argument("--gui", action="store_true", help="Khởi chạy giao diện đồ họa Desktop PyQt6")
     parser.add_argument("--eval", action="store_true", help="Chạy toàn bộ thí nghiệm đánh giá và xuất báo cáo/biểu đồ vào outputs/")
-    parser.add_argument("--package", action="store_true", help="Đóng gói mã nguồn, dữ liệu và báo cáo thành file zip")
     parser.add_argument("query", nargs="*", help="Câu hỏi nhanh (One-shot CLI)")
 
     args = parser.parse_args()
@@ -281,29 +304,17 @@ def main():
         evaluator.run_all()
         return
 
-    if args.package:
-        from package import package_project
-        package_project(os.path.dirname(os.path.abspath(__file__)))
-        return
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    profiles_path = os.path.join(base_dir, "config", "profiles.json")
-    intents_path = os.path.join(base_dir, "data", "intents.csv")
-    test_intents_path = os.path.join(base_dir, "data", "test_intents.csv")
-    dishes_path = os.path.join(base_dir, "data", "dishes.csv")
-
     if args.check:
         print("\n" + "#" * 80)
         print("### KIỂM TRA DỮ LIỆU VÀ CẤU HÌNH DỰ ÁN LUNCH CHATBOT (NEU) ###".center(74))
         print("#" * 80 + "\n")
-        check_profiles_json(profiles_path)
-        check_intents_csv(intents_path, test_intents_path)
-        check_dishes_csv(dishes_path)
+        check_profiles_json(DEFAULT_PROFILES_PATH)
+        check_intents_csv(DEFAULT_INTENTS_PATH, DEFAULT_TEST_INTENTS_PATH)
+        check_dishes_csv(DEFAULT_DISHES_PATH)
         print(">>> TẤT CẢ DỮ LIỆU CSV VÀ JSON ĐÃ ĐƯỢC XÁC THỰC HỢP LỆ VÀ SẴN SÀNG! <<<\n")
         return
 
     if args.query:
-        # One-shot CLI query
         query_text = " ".join(args.query)
         print(f"\n[Sinh viên NEU]: {query_text}")
         bot = Chatbot()
@@ -313,17 +324,15 @@ def main():
         print(resp["reply"])
         return
 
-    # Mặc định: Chạy CLI interactive nếu có terminal tương tác, hoặc in hướng dẫn
     if sys.stdin.isatty() or args.chat:
         run_cli_interactive()
     else:
-        # Khi chạy không tương tác (như test pipeline)
         print("\n" + "#" * 80)
         print("### KIỂM TRA DỮ LIỆU VÀ CẤU HÌNH DỰ ÁN LUNCH CHATBOT (NEU) ###".center(74))
         print("#" * 80 + "\n")
-        check_profiles_json(profiles_path)
-        check_intents_csv(intents_path, test_intents_path)
-        check_dishes_csv(dishes_path)
+        check_profiles_json(DEFAULT_PROFILES_PATH)
+        check_intents_csv(DEFAULT_INTENTS_PATH, DEFAULT_TEST_INTENTS_PATH)
+        check_dishes_csv(DEFAULT_DISHES_PATH)
         print("Mẹo: Chạy 'python main.py --chat' để bắt đầu hội thoại CLI tương tác!\n")
 
 

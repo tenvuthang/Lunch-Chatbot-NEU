@@ -1,19 +1,57 @@
 """
-Module quản lý dữ liệu cho Lunch Chatbot: đọc/ghi/kiểm tra hợp lệ data/dishes.csv và data/intents.csv.
+Module quản lý dữ liệu cho Lunch Chatbot: đọc/ghi/kiểm tra hợp lệ data/dishes_v2.csv và data/intents.csv.
 Tách khỏi giao diện để có thể kiểm thử độc lập. Mọi hàm ghi file đều ghi nguyên tử (file tạm rồi thay thế)
 để tránh hỏng dữ liệu nếu chương trình bị dừng giữa chừng.
+Hỗ trợ tương thích ngược với file CSV cũ thiếu các cột chay, do_dong_cao_diem, so_cho_ngoi, nguon_du_lieu.
 """
 
 import csv
 import os
-import tempfile
 from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple
 
+try:
+    from src.io_utils import write_csv_rows, read_csv_dicts
+    from src.config import (
+        DEFAULT_DO_DONG_CAO_DIEM,
+        DEFAULT_SO_CHO_NGOI,
+        DEFAULT_NGUON_DU_LIEU,
+        ALLOWED_DATA_SOURCES,
+    )
+except ImportError:
+    from io_utils import write_csv_rows, read_csv_dicts
+    from config import (
+        DEFAULT_DO_DONG_CAO_DIEM,
+        DEFAULT_SO_CHO_NGOI,
+        DEFAULT_NGUON_DU_LIEU,
+        ALLOWED_DATA_SOURCES,
+    )
+
 DISH_COLUMNS: List[str] = [
-    "id", "ten_mon", "loai", "gia_vnd", "khoang_cach_m", "thoi_gian_phuc_vu_phut",
-    "do_no", "dinh_duong", "do_ngon", "cay", "mo_ta",
+    "id",
+    "ten_mon",
+    "loai",
+    "gia_vnd",
+    "khoang_cach_m",
+    "thoi_gian_phuc_vu_phut",
+    "do_no",
+    "dinh_duong",
+    "do_ngon",
+    "cay",
+    "chay",
+    "do_dong_cao_diem",
+    "so_cho_ngoi",
+    "mo_ta",
+    "nguon_du_lieu",
 ]
+
+# Cột không bắt buộc có trong file cũ -> giá trị mặc định khi thiếu (tương thích ngược).
+OPTIONAL_COLUMN_DEFAULTS: Dict[str, str] = {
+    "chay": "0",
+    "do_dong_cao_diem": str(DEFAULT_DO_DONG_CAO_DIEM),
+    "so_cho_ngoi": str(DEFAULT_SO_CHO_NGOI),
+    "nguon_du_lieu": DEFAULT_NGUON_DU_LIEU,
+}
 
 # Nhãn ý định (khớp với data/intents.csv) và tên hiển thị tiếng Việt
 INTENT_LABELS: Dict[str, str] = {
@@ -36,6 +74,9 @@ _INT_RANGES: Dict[str, Tuple[int, int]] = {
     "dinh_duong": (1, 5),
     "do_ngon": (1, 5),
     "cay": (0, 1),
+    "chay": (0, 1),
+    "do_dong_cao_diem": (1, 5),
+    "so_cho_ngoi": (1, 1000),
 }
 
 _FIELD_VI: Dict[str, str] = {
@@ -48,24 +89,16 @@ _FIELD_VI: Dict[str, str] = {
     "dinh_duong": "Dinh dưỡng",
     "do_ngon": "Độ ngon",
     "cay": "Cay",
+    "chay": "Chay",
+    "do_dong_cao_diem": "Độ đông cao điểm",
+    "so_cho_ngoi": "Số chỗ ngồi",
+    "nguon_du_lieu": "Nguồn dữ liệu",
 }
 
 
 def _atomic_write_csv(path: str, header: List[str], rows: List[List[Any]]) -> None:
-    """Ghi CSV UTF-8 nguyên tử: ghi ra file tạm cùng thư mục rồi thay thế file đích."""
-    directory = os.path.dirname(os.path.abspath(path))
-    os.makedirs(directory, exist_ok=True)
-    fd, tmp_path = tempfile.mkstemp(suffix=".tmp", dir=directory)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(header)
-            writer.writerows(rows)
-        os.replace(tmp_path, path)
-    except Exception:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-        raise
+    """Ghi CSV UTF-8 có BOM (utf-8-sig) nguyên tử: ghi ra file tạm cùng thư mục rồi thay thế file đích."""
+    write_csv_rows(path, header, rows, atomic=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -86,6 +119,8 @@ def validate_dish(dish: Dict[str, Any]) -> List[str]:
             errors.append(f"{_FIELD_VI[key]} quá dài (tối đa 120 ký tự).")
 
     for key, (low, high) in _INT_RANGES.items():
+        if key in OPTIONAL_COLUMN_DEFAULTS and key not in dish:
+            continue  # cột tùy chọn bị thiếu -> dùng mặc định, không báo lỗi
         raw = str(dish.get(key, "")).strip()
         try:
             number = int(float(raw))
@@ -97,26 +132,37 @@ def validate_dish(dish: Dict[str, Any]) -> List[str]:
         if not low <= number <= high:
             errors.append(f"{_FIELD_VI[key]} phải nằm trong khoảng {low:,} – {high:,} (nhận được: {number:,}).")
 
+    if "nguon_du_lieu" in dish:
+        src_val = str(dish.get("nguon_du_lieu", "")).strip()
+        if src_val not in ALLOWED_DATA_SOURCES:
+            errors.append(
+                f"Nguồn dữ liệu không hợp lệ ('{src_val}'); chỉ chấp nhận: {', '.join(ALLOWED_DATA_SOURCES)}."
+            )
+
     if len(str(dish.get("mo_ta", ""))) > 500:
         errors.append("Mô tả quá dài (tối đa 500 ký tự).")
     return errors
 
 
 def load_dishes(path: str) -> List[Dict[str, str]]:
-    """Đọc data/dishes.csv thành danh sách dict (giá trị giữ dạng chuỗi). Ném FileNotFoundError nếu thiếu file."""
+    """Đọc CSV món ăn thành danh sách dict (giá trị giữ dạng chuỗi). Ném FileNotFoundError nếu thiếu file."""
     if not os.path.exists(path):
         raise FileNotFoundError(f"Không tìm thấy file dữ liệu món ăn: {path}")
-    with open(path, "r", encoding="utf-8", newline="") as f:
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
-        missing = [c for c in DISH_COLUMNS if c not in (reader.fieldnames or [])]
+        required = [c for c in DISH_COLUMNS if c not in OPTIONAL_COLUMN_DEFAULTS]
+        missing = [c for c in required if c not in (reader.fieldnames or [])]
         if missing:
             raise ValueError(f"File {path} thiếu cột: {', '.join(missing)}")
-        return [{c: (row.get(c) or "").strip() for c in DISH_COLUMNS} for row in reader]
+        return [
+            {c: ((row.get(c) or "").strip() or OPTIONAL_COLUMN_DEFAULTS.get(c, "")) for c in DISH_COLUMNS}
+            for row in reader
+        ]
 
 
 def save_dishes(path: str, dishes: List[Dict[str, Any]]) -> None:
     """Ghi toàn bộ danh sách món ăn vào CSV (đúng thứ tự cột chuẩn)."""
-    rows = [[d.get(c, "") for c in DISH_COLUMNS] for d in dishes]
+    rows = [[d.get(c, OPTIONAL_COLUMN_DEFAULTS.get(c, "")) for c in DISH_COLUMNS] for d in dishes]
     _atomic_write_csv(path, DISH_COLUMNS, rows)
 
 
@@ -185,8 +231,11 @@ def _normalize_dish(dish: Dict[str, Any]) -> Dict[str, str]:
     out["ten_mon"] = str(dish["ten_mon"]).strip()
     out["loai"] = str(dish["loai"]).strip()
     for key in _INT_RANGES:
-        out[key] = str(int(float(str(dish[key]).strip())))
+        value = dish.get(key, OPTIONAL_COLUMN_DEFAULTS[key]) if key in OPTIONAL_COLUMN_DEFAULTS else dish[key]
+        out[key] = str(int(float(str(value).strip())))
     out["mo_ta"] = " ".join(str(dish.get("mo_ta", "")).split())
+    src_val = str(dish.get("nguon_du_lieu", DEFAULT_NGUON_DU_LIEU)).strip() or DEFAULT_NGUON_DU_LIEU
+    out["nguon_du_lieu"] = src_val
     return out
 
 
@@ -212,7 +261,7 @@ def load_intents(path: str) -> List[Tuple[str, str]]:
     """Đọc data/intents.csv thành danh sách (text, label)."""
     if not os.path.exists(path):
         raise FileNotFoundError(f"Không tìm thấy file dữ liệu câu mẫu: {path}")
-    with open(path, "r", encoding="utf-8", newline="") as f:
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         if not reader.fieldnames or "text" not in reader.fieldnames or "label" not in reader.fieldnames:
             raise ValueError(f"File {path} phải có hai cột 'text' và 'label'.")

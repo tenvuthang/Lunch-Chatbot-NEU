@@ -1,0 +1,51 @@
+﻿id,ten_mon,loai,gia_vnd,khoang_cach_m,thoi_gian_phuc_vu_phut,do_no,dinh_duong,do_ngon,cay,chay,do_dong_cao_diem,so_cho_ngoi,mo_ta,nguon_du_lieu
+1,Cơm bình dân tự chọn ngõ Tự Do,cơm,25000,150,5,4,3,3,0,0,5,43,Quán cơm sinh viên ngõ Tự Do giá rẻ nhiều món tự chọn có canh và trà đá miễn phí,mô phỏng
+2,Cơm tấm sườn bì chả Trần Đại Nghĩa,cơm,45000,300,10,4,4,4,0,0,3,50,Sườn nướng thơm phức đậm đà kèm bì chả trứng ốp la nước mắm chua ngọt,mô phỏng
+3,Cơm rang dưa bò Lê Thanh Nghị,cơm,40000,450,8,4,3,4,0,0,3,57,Cơm rang hạt tơi giòn dưa cải chua giòn thịt bò xào mềm thơm nức mũi,mô phỏng
+4,Cơm gà xối mỡ Tạ Quang Bửu,cơm,45000,600,10,4,4,4,0,0,2,42,Đùi gà chiên giòn rụm bên ngoài mọng nước bên trong cơm hạt sen vàng óng,mô phỏng
+5,Cơm niêu Singapore Phố Vọng,cơm văn phòng,65000,800,15,4,4,5,0,0,1,75,Cơm cháy giòn đáy niêu sốt bò tiêu đen hoặc gà nấm thơm ngậy đậm đà,mô phỏng
+6,Cơm sườn que sốt BBQ ngõ Tự Do,cơm,35000,200,8,4,3,4,1,0,4,56,Sườn que ướp đậm vị sốt cay nhẹ hấp dẫn ăn kèm kim chi và dưa góp,mô phỏng
+7,Cơm trộn Hàn Quốc Bibimbap KTX NEU,cơm,40000,100,10,3,4,4,1,0,4,41,Cơm trộn thịt bò băm rau củ nấm kim chi sốt Gochujang cay nồng chuẩn vị,mô phỏng
+8,Cơm cá kho tộ canh chua ngõ Tự Do,cơm,30000,180,7,4,4,3,0,0,4,48,Suất cơm truyền thống ấm cúng cá basa kho tộ đậm đà kèm bát canh chua thanh mát,mô phỏng
+9,Cơm thịt kho tàu trứng cút Trần Đại Nghĩa,cơm,30000,350,5,4,3,3,0,0,4,55,Thịt ba chỉ kho mềm rục trứng cút ngấm vị béo bùi ăn rất đưa cơm,mô phỏng
+10,Cơm văn phòng cá hồi sốt Teriyaki Đại La,cơm văn phòng,75000,900,15,4,5,5,0,0,1,65,Set cơm chuẩn vị Nhật cá hồi áp chảo sốt ngọt kèm súp miso thanh đạm,mô phỏng
+11,Bún chả nướng than hoa ngõ Tự Do,bún,35000,120,7,4,3,4,0,0,5,47,Chả viên chả miếng nướng than hoa thơm lừng nước chấm đu đủ cà rốt chua ngọt,mô phỏng
+12,Bún đậu mắm tôm thập cẩm KTX NEU,bún,40000,150,8,4,3,5,1,0,5,54,Mẹt bún đậu đầy đặn gồm chả cốm nem rán dồi sụn thịt chân giò mắm tôm đánh sủi bọt,mô phỏng
+13,Bún bò Huế chân giò bò viên Lê Thanh Nghị,bún,45000,400,10,4,4,4,1,0,3,39,Nước dùng ngọt xương thơm mùi sả ớt sa tế cay nồng tiết luộc bò bắp giòn sần sật,mô phỏng
+14,Bún cá cay Hải Phòng Tạ Quang Bửu,bún,40000,550,8,3,4,4,1,0,3,46,Cá rô phi chiên giòn lòng cá chả cá kèm dọc mùng nước dùng chua cay đậm đà,mô phỏng
+15,Bún riêu cua bắp bò Giải Phóng,bún,35000,500,6,4,4,4,1,0,4,53,Bát bún riêu gạch cua thơm ngậy bắp bò hoa chần tái giấm bỗng chua dịu,mô phỏng
+16,Bún ốc chuối đậu nóng hổi Phố Vọng,bún,35000,750,8,3,3,4,1,0,3,38,Ốc nhồi giòn sần sật chuối xanh bùi dẻo đậu rán vàng ngập trong nước dùng vàng nghệ,mô phỏng
+17,Bún ngan trộn chua ngọt Đại La,bún,45000,850,7,4,4,4,0,0,2,45,Thịt ngan mềm ngọt măng cay lạc rang rau thơm hòa quyện sốt tương chua ngọt,mô phỏng
+18,Bún sườn mọc chua ngõ Tự Do,bún,30000,160,5,3,3,3,0,0,5,52,Nước dùng cà chua dọc mùng thanh nhẹ sườn non mềm róc thịt mọc giòn thơm nấm hương,mô phỏng
+19,Phở bò tái lăn Trần Đại Nghĩa,phở,50000,250,7,4,4,5,0,0,4,37,Thịt bò xào lăn tỏi tái nhanh giữ trọn vị ngọt thơm nước dùng đậm đà hành lá phủ xanh,mô phỏng
+20,Phở gà ta chặt lá chanh Tạ Quang Bửu,phở,40000,600,6,3,4,4,0,0,3,44,Gà ta da vàng giòn thịt chắc thơm nức mùi lá chanh thái chỉ nước dùng trong veo,mô phỏng
+21,Phở cuốn & phở chiên phồng Lê Thanh Nghị,phở,55000,500,12,4,3,4,0,0,2,51,Đĩa phở cuốn chấm nước mắm thanh hoặc phở chiên giòn rụm phủ sốt bò xào rau cải,mô phỏng
+22,Phở xào bò mềm rau cải ngõ Tự Do,phở,45000,200,10,4,3,4,0,0,3,36,Bánh phở xào cháy cạnh thịt bò ướp tiêu tỏi cùng rau cải ngọt xanh mướt,mô phỏng
+23,Bánh mì pate chả ngõ Tự Do,bánh mì,20000,100,5,2,2,3,1,0,5,10,Bánh mì giòn rụm pate béo ngậy chả lụa ruốc dưa chuột và sốt ớt cay truyền thống,mô phỏng
+24,Bánh mì chảo Cột Điện Lê Thanh Nghị,bánh mì,45000,400,10,4,3,4,1,0,3,28,Chảo gang xèo xèo gồm pate nướng trứng ốp la xúc xích sốt cà chua sệt chấm bánh mì,mô phỏng
+25,Bánh mì Doner Kebab thịt nướng cổng KTX NEU,bánh mì,25000,80,5,3,3,4,1,0,5,6,Bánh mì tam giác nướng giòn nhân thịt xiên quay bắp cải tím sốt mayonnaise chua ngọt,mô phỏng
+26,Bánh mì bò sốt vang Đại La,bánh mì,40000,800,7,4,4,4,0,0,2,24,Bò sốt vang thơm nức mùi quế hồi thịt bò dẻ sườn mềm tan chấm kèm bánh mì nóng giòn,mô phỏng
+27,Bánh mì que Hải Phòng cay tê Trần Đại Nghĩa,bánh mì,20000,300,5,2,2,3,1,0,5,8,Combo 3 bánh mì que nhỏ giòn rụm nhân pate mịn rưới chí chương cay xé lưỡi,mô phỏng
+28,Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa,mì,45000,350,8,4,4,4,0,0,3,56,Sợi mì trứng dai vàng sủi cảo nhân tôm tươi thịt xá xíu trứng luộc nước dùng tôm ngọt lịm,mô phỏng
+29,Mì cay 7 cấp độ Hàn Quốc Lê Thanh Nghị,mì,50000,450,12,3,3,4,1,0,2,70,Tô mì kim chi bò hải sản cay xé lưỡi sôi sùng sục trong thố đất đậm đà thách thức,mô phỏng
+30,Miến lươn trộn giòn Tạ Quang Bửu,mì,45000,650,8,3,4,4,0,0,3,48,Lươn khô chiên giòn tan trộn đều miến dong dưa chuột giá đỗ lạc rang sốt chua ngọt,mô phỏng
+31,Miến gà măng khô KTX NEU,mì,35000,120,6,3,4,3,0,0,5,55,Sợi miến dai mềm nước dùng ninh gà thanh ngọt thịt gà xé phay măng khô xào ngấm vị,mô phỏng
+32,Mì xào giòn hải sản Giải Phóng,mì,50000,700,10,4,3,4,0,0,2,40,Sợi mì chiên vàng giòn rụm ngập sốt tôm mực ngọt lịm xào cùng rau củ thanh mát,mô phỏng
+33,Combo gà rán giòn & burger Lotteria Giải Phóng,đồ ăn nhanh,65000,400,8,4,2,4,0,0,2,85,Miếng gà rán giòn rụm béo ngậy kèm burger phô mai thơm ngon và ly nước ngọt mát lạnh,mô phỏng
+34,Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa,đồ ăn nhanh,45000,300,8,3,2,4,1,0,3,40,Gà chiên róc xương tẩm bột giòn áo lớp sốt cay ngọt rắc mè trắng kèm bánh gạo dẻo,mô phỏng
+35,Pizza mini phô mai xúc xích Tạ Quang Bửu,đồ ăn nhanh,50000,600,12,3,2,4,0,0,1,35,Đế bánh pizza giòn xốp ngập phô mai mozzarella kéo sợi xúc xích hun khói đậm vị,mô phỏng
+36,Salad ức gà áp chảo sốt mè rang Trần Đại Nghĩa,salad,45000,280,7,3,5,4,0,0,3,18,Món ăn thanh đạm giảm cân ức gà xé mềm xà lách giòn cà chua bi trứng luộc sốt mè béo nhẹ,mô phỏng
+37,Poke bowl cá hồi rau củ Lê Thanh Nghị,salad,80000,500,10,4,5,5,0,0,1,22,Tô poke nhiều màu sắc dinh dưỡng cá hồi tươi bơ sáp rong biển bắp ngọt cơm gạo lứt,mô phỏng
+38,Bún gạo lứt trộn ức gà Eat Clean KTX NEU,salad,45000,150,8,3,5,4,0,0,3,18,Bún gạo lứt giàu chất xơ ức gà luộc rau củ quả hấp chấm sốt tương gừng không dầu mỡ,mô phỏng
+39,Bánh cuốn nóng chả quế ngõ Tự Do,khác,25000,180,6,3,3,4,0,0,5,22,Bánh cuốn tráng mỏng nóng hổi nhân thịt băm mộc nhĩ rắc hành phi thơm chấm mắm ấm kèm chả,mô phỏng
+40,Cháo sườn sụn Đài Loan quẩy giòn Phố Vọng,khác,30000,750,5,3,3,4,1,0,4,16,Cháo bột xay mịn đặc quánh sườn sụn ninh mềm sần sật quẩy giòn tan rắc hạt tiêu ớt bột,mô phỏng
+41,Cơm chay thập cẩm đậu hũ nấm xào ngõ Tự Do,cơm,30000,200,6,4,4,3,0,1,4,37,Suất cơm chay tự chọn đậu hũ chiên giòn nấm xào rau củ kèm canh rau thanh đạm và trà đá miễn phí,mô phỏng
+42,Bún chay nấm rơm đậu hũ nước dùng rau củ Lê Thanh Nghị,bún,35000,450,7,3,4,4,0,1,4,44,Bát bún nước dùng ninh từ củ quả ngọt thanh kèm nấm rơm đậu hũ chiên và rau sống tươi giòn,mô phỏng
+43,Đậu hũ sốt cà chua cơm trắng Trần Đại Nghĩa,cơm,25000,280,6,3,3,3,0,1,5,51,Đậu hũ non rán vàng sốt cà chua đậm vị ăn kèm cơm trắng dẻo và bát canh rau ngọt,mô phỏng
+44,Salad rau củ hạt dinh dưỡng sốt mè rang KTX NEU,salad,40000,150,6,2,5,4,0,1,3,18,Xà lách cà chua bi bắp ngô đậu hũ chiên và hạt óc chó trộn sốt mè rang dầu oliu không dùng thịt cá trứng,mô phỏng
+45,Bánh mì chay chả nấm đậu hũ ngõ Tự Do,bánh mì,25000,130,5,3,3,3,0,1,5,10,Bánh mì giòn nhân chả nấm chay đậu hũ rán dưa chuột đồ chua và sốt tương không dùng pate hay trứng,mô phỏng
+46,Xôi xéo gà xé ruốc hành phi ngõ Tự Do,xôi,25000,120,5,4,3,4,0,0,5,12,Xôi nếp cái hoa vàng dẻo thơm đỗ xanh xéo bùi béo gà xé xào nấm ruốc thịt và hành phi giòn rụm,mô phỏng
+47,Nem nướng Nha Trang mẹt đầy đủ Trần Đại Nghĩa,nem nướng,40000,320,8,4,4,5,1,0,4,42,Mẹt nem nướng thơm lừng cuộn bánh tráng ram giòn rau sống xoài xanh dưa chuột chấm sốt tương nếp ấm béo ngậy,mô phỏng
+48,Bánh giò nóng thịt băm mộc nhĩ kèm chả cốm KTX NEU,bánh giò,25000,90,5,3,3,4,1,0,5,18,Bánh giò bột mịn núng nính nhân thịt băm mộc nhĩ trứng cút đậm đà ăn kèm chả cốm giò tai và dưa góp chống ngấy,mô phỏng
+49,Xôi sườn cay kim chi Lê Thanh Nghị,xôi,35000,400,6,4,3,4,1,0,4,26,Xôi trắng dẻo rưới sốt sườn cay đượm vị sườn non ninh nhừ róc xương kèm kim chi chua cay giòn tan,mô phỏng
+50,Bánh giò chay nấm hương mộc nhĩ ngõ Tự Do,bánh giò,20000,160,5,3,3,3,0,1,5,12,Bánh giò chay vỏ mềm mướt nhân đậu xanh nấm hương mộc nhĩ xào tiêu thơm lừng ăn kèm dưa chua ngọt thanh mát,mô phỏng

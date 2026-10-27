@@ -1,7 +1,7 @@
 ====================================================================================================
 VÍ DỤ TÍNH TAY (WORKED EXAMPLE) – CHƯƠNG 2
 Hệ thống chatbot gợi ý bữa trưa cho sinh viên NEU
-Mọi số liệu dưới đây do công thức tính tay sinh ra và đã được đối chiếu với sklearn (xem mục 1.10, 2.6 và 3).
+Mọi số liệu dưới đây do công thức tính tay sinh ra và đã được đối chiếu với sklearn và DishRecommender (xem mục 1.10, 2.9 và 3).
 Quy ước: bảng in làm tròn 4 chữ số thập phân; phép tính nội bộ dùng độ chính xác đầy đủ.
 ====================================================================================================
 
@@ -316,68 +316,130 @@ PHẦN 1. PHÂN LOẠI NHU CẦU BẰNG TF-IDF + MULTINOMIAL NAIVE BAYES
    NeedClassifier.predict() của ứng dụng trả về nhãn 'tiet_kiem' -> trùng với tính tay.
 
 ====================================================================================================
-PHẦN 2. CHẤM ĐIỂM VÀ XẾP HẠNG MÓN ĂN THEO NHÓM NHU CẦU
+PHẦN 2. CHẤM ĐIỂM VÀ XẾP HẠNG MÓN ĂN THEO NHÓM NHU CẦU (7 TIÊU CHÍ & MÔ HÌNH ĐỘ ĐÔNG)
 ====================================================================================================
 2.1. Nhóm nhu cầu = nhãn dự đoán ở Phần 1: 'tiet_kiem'. Trọng số THẬT đọc từ config/profiles.json:
-   w_gia          = 0.35   (Giá (đ))
-   w_khoang_cach  = 0.15   (Khoảng cách (m))
-   w_thoi_gian    = 0.10   (Thời gian (phút))
-   w_do_no        = 0.20   (Độ no)
-   w_dinh_duong   = 0.10   (Dinh dưỡng)
-   w_do_ngon      = 0.10   (Độ ngon)
+   w_gia          = 0.32   (Giá (đ))
+   w_khoang_cach  = 0.14   (Khoảng cách (m))
+   w_thoi_gian    = 0.09   (Thời gian chờ (phút))
+   w_do_no        = 0.19   (Độ no)
+   w_dinh_duong   = 0.09   (Dinh dưỡng)
+   w_do_ngon      = 0.09   (Độ ngon)
+   w_cho_ngoi     = 0.08   (Chỗ ngồi nhóm)
    Tổng trọng số = 1.00
 
-2.2. Bốn món lấy từ data/dishes.csv (dùng đủ 6 tiêu chí)
-   Món                                                       Giá (đ)            Khoảng cách (m)    Thời gian (phút)   Độ no     Dinh dưỡng   Độ ngon 
-   [1] Cơm bình dân tự chọn ngõ Tự Do                        25000              150                5                  4         3            3       
-   [12] Bún đậu mắm tôm thập cẩm KTX NEU                     40000              150                8                  4         3            5       
-   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          45000              350                8                  4         4            4       
-   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         45000              300                8                  3         2            4       
+2.2. Bốn món lấy từ data/dishes_v2.csv (dữ liệu ban đầu)
+   Món                                               Giá (đ)    K.Cách (m)   TG PV (phút)   Độ no    D.Dưỡng    Độ ngon   Độ đông    Chỗ ngồi 
+   [1] Cơm bình dân tự chọn ngõ Tự Do                25000      150          5              4        3          3         5          43       
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU             40000      150          8              4        3          5         5          54       
+   [23] Bánh mì pate chả ngõ Tự Do                   20000      100          5              2        2          3         5          10       
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa  45000      350          8              4        4          4         3          56       
 
-2.3. Chuẩn hóa min-max trong 4 món (đảo chiều cho tiêu chí chi phí)
-   Chi phí (giá, khoảng cách, thời gian): v = (max − x) / (max − min)
-   Lợi ích (độ no, dinh dưỡng, độ ngon) : v = (x − min) / (max − min)
-   Tiêu chí            min       max       max−min   Loại      
-   Giá (đ)             25000     45000     20000     chi phí   
-   Khoảng cách (m)     150       350       200       chi phí   
-   Thời gian (phút)    5         8         3         chi phí   
-   Độ no               3         4         1         lợi ích   
-   Dinh dưỡng          2         4         2         lợi ích   
-   Độ ngon             3         5         2         lợi ích   
+2.3. Mô hình hóa Độ đông và Chỗ ngồi nhóm (Khung giờ: cao_diem, Số người = 4)
+   Tham số từ config/crowd_config.json:
+     • Hệ số khung giờ cao điểm : he_so_khung_gio['cao_diem'] = 1.0
+     • Hệ số thời gian chờ      : a = 1.0, b = 0.10
+     • Hệ số chiếm chỗ          : he_so_chiem_cho = 0.9
+   Công thức từng bước tính:
+     (1) do_dong_hieu_dung = do_dong_cao_diem × he_so_khung_gio
+     (2) thoi_gian_cho     = thoi_gian_phuc_vu_phut × (1 + a × do_dong_hieu_dung / 5) × (1 + b × (so_nguoi − 1))
+     (3) cho_trong         = so_cho_ngoi × (1 − he_so_chiem_cho × do_dong_hieu_dung / 5)
+     (4) cho_ngoi_nhom     = min(1.0, cho_trong / so_nguoi)
+     (*) Cảnh báo: Nếu cho_trong < so_nguoi thì cảnh báo 'Có thể phải chờ chỗ'.
 
-   Giá trị chuẩn hóa v:
-   Món                                                       Giá (đ)            Khoảng cách (m)    Thời gian (phút)   Độ no     Dinh dưỡng   Độ ngon 
-   [1] Cơm bình dân tự chọn ngõ Tự Do                        1.0000             1.0000             1.0000             1.0000    0.5000       0.0000  
-   [12] Bún đậu mắm tôm thập cẩm KTX NEU                     0.2500             1.0000             0.0000             1.0000    0.5000       1.0000  
-   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          0.0000             0.0000             0.0000             1.0000    1.0000       0.5000  
-   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         0.0000             0.2500             0.0000             0.0000    0.0000       0.5000  
+   Chi tiết tính toán từng món (so_nguoi = 4, cao điểm):
+   [1] Cơm bình dân tự chọn ngõ Tự Do:
+      • do_dong_hieu_dung = 5 × 1.0 = 5.0
+      • thoi_gian_cho     = 5 × (1 + 1.0×5.0/5) × (1 + 0.1×3)
+                          = 5 × 2.00 × 1.30 = 13.00 phút
+      • cho_trong         = 43 × (1 − 0.9×5.0/5) = 4.30 chỗ
+      • cho_ngoi_nhom     = min(1.0, 4.30 / 4) = 1.0000 --> Đủ chỗ cho nhóm
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU:
+      • do_dong_hieu_dung = 5 × 1.0 = 5.0
+      • thoi_gian_cho     = 8 × (1 + 1.0×5.0/5) × (1 + 0.1×3)
+                          = 8 × 2.00 × 1.30 = 20.80 phút
+      • cho_trong         = 54 × (1 − 0.9×5.0/5) = 5.40 chỗ
+      • cho_ngoi_nhom     = min(1.0, 5.40 / 4) = 1.0000 --> Đủ chỗ cho nhóm
+   [23] Bánh mì pate chả ngõ Tự Do:
+      • do_dong_hieu_dung = 5 × 1.0 = 5.0
+      • thoi_gian_cho     = 5 × (1 + 1.0×5.0/5) × (1 + 0.1×3)
+                          = 5 × 2.00 × 1.30 = 13.00 phút
+      • cho_trong         = 10 × (1 − 0.9×5.0/5) = 1.00 chỗ
+      • cho_ngoi_nhom     = min(1.0, 1.00 / 4) = 0.2500 --> Cảnh báo: Có thể phải chờ chỗ!
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa:
+      • do_dong_hieu_dung = 3 × 1.0 = 3.0
+      • thoi_gian_cho     = 8 × (1 + 1.0×3.0/5) × (1 + 0.1×3)
+                          = 8 × 1.60 × 1.30 = 16.64 phút
+      • cho_trong         = 56 × (1 − 0.9×3.0/5) = 25.76 chỗ
+      • cho_ngoi_nhom     = min(1.0, 25.76 / 4) = 1.0000 --> Đủ chỗ cho nhóm
 
-2.4. Đóng góp w × v của từng tiêu chí (4 chữ số thập phân) và điểm tổng  Điểm = Σ w×v
-   Món                                                       Giá (đ)            Khoảng cách (m)    Thời gian (phút)   Độ no     Dinh dưỡng   Độ ngon   Σ = Điểm 
-   [1] Cơm bình dân tự chọn ngõ Tự Do                        0.3500             0.1500             0.1000             0.2000    0.0500       0.0000    0.8500   
-   [12] Bún đậu mắm tôm thập cẩm KTX NEU                     0.0875             0.1500             0.0000             0.2000    0.0500       0.1000    0.5875   
-   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          0.0000             0.0000             0.0000             0.2000    0.1000       0.0500    0.3500   
-   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         0.0000             0.0375             0.0000             0.0000    0.0000       0.0500    0.0875   
+2.4. Ma trận 7 tiêu chí đưa vào chấm điểm (thoi_gian = thoi_gian_cho, cho_ngoi = cho_ngoi_nhom)
+   Món                                               Giá (đ)     Khoảng cách (m)  Thời gian chờ (phút)  Độ no     Dinh dưỡng  Độ ngon    Chỗ ngồi nhóm  
+   [1] Cơm bình dân tự chọn ngõ Tự Do                25000.00    150.00          13.00               4.00      3.00        3.00       1.00           
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU             40000.00    150.00          20.80               4.00      3.00        5.00       1.00           
+   [23] Bánh mì pate chả ngõ Tự Do                   20000.00    100.00          13.00               2.00      2.00        3.00       0.25           
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa  45000.00    350.00          16.64               4.00      4.00        4.00       1.00           
 
-   Kiểm tra cộng từng món:
-   [1] Cơm bình dân tự chọn ngõ Tự Do           : 0.3500 + 0.1500 + 0.1000 + 0.2000 + 0.0500 + 0.0000 = 0.8500  (điểm 0.8500)
-   [12] Bún đậu mắm tôm thập cẩm KTX NEU        : 0.0875 + 0.1500 + 0.0000 + 0.2000 + 0.0500 + 0.1000 = 0.5875  (điểm 0.5875)
-   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Ng: 0.0000 + 0.0000 + 0.0000 + 0.2000 + 0.1000 + 0.0500 = 0.3500  (điểm 0.3500)
-   [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại N: 0.0000 + 0.0375 + 0.0000 + 0.0000 + 0.0000 + 0.0500 = 0.0875  (điểm 0.0875)
+2.5. Chuẩn hóa min-max trong 4 món (đảo chiều cho tiêu chí chi phí)
+   Chi phí (giá, khoảng cách, thời gian chờ): v = (max − x) / (max − min)
+   Lợi ích (độ no, dinh dưỡng, độ ngon, chỗ ngồi nhóm) : v = (x − min) / (max − min)
+   Tiêu chí                min         max         max−min     Loại      
+   Giá (đ)                 20000.00    45000.00    25000.00    chi phí   
+   Khoảng cách (m)         100.00      350.00      250.00      chi phí   
+   Thời gian chờ (phút)    13.00       20.80       7.80        chi phí   
+   Độ no                   2.00        4.00        2.00        lợi ích   
+   Dinh dưỡng              2.00        4.00        2.00        lợi ích   
+   Độ ngon                 3.00        5.00        2.00        lợi ích   
+   Chỗ ngồi nhóm           0.25        1.00        0.75        lợi ích   
 
-2.5. Bảng xếp hạng
-   #1  [1] Cơm bình dân tự chọn ngõ Tự Do                        điểm = 0.8500
-   #2  [12] Bún đậu mắm tôm thập cẩm KTX NEU                     điểm = 0.5875
-   #3  [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa          điểm = 0.3500
-   #4  [34] Gà viên sốt cay ngọt Hàn Quốc Trần Đại Nghĩa         điểm = 0.0875
+   Giá trị chuẩn hóa v (mức độ thỏa mãn trong khoảng [0, 1]):
+   Món                                               Giá (đ)     Khoảng cách (m)  Thời gian chờ (phút)  Độ no     Dinh dưỡng  Độ ngon    Chỗ ngồi nhóm  
+   [1] Cơm bình dân tự chọn ngõ Tự Do                0.8000      0.8000          1.0000              1.0000    0.5000      0.0000     1.0000         
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU             0.2000      0.8000          0.0000              1.0000    0.5000      1.0000     1.0000         
+   [23] Bánh mì pate chả ngõ Tự Do                   1.0000      1.0000          1.0000              0.0000    0.0000      0.0000     0.0000         
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa  0.0000      0.0000          0.5333              1.0000    1.0000      0.5000     1.0000         
 
-2.6. Đối chiếu (assert sai số < 1e-6)
+2.6. Đóng góp w × v của từng tiêu chí (4 chữ số thập phân) và tổng điểm (Điểm = Σ w×v)
+   Món                                               Giá (đ)     Khoảng cách (m)  Thời gian chờ (phút)  Độ no     Dinh dưỡng  Độ ngon    Chỗ ngồi nhóm    Σ = Điểm  
+   [1] Cơm bình dân tự chọn ngõ Tự Do                0.2560      0.1120          0.0900              0.1900    0.0450      0.0000     0.0800           0.7730    
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU             0.0640      0.1120          0.0000              0.1900    0.0450      0.0900     0.0800           0.5810    
+   [23] Bánh mì pate chả ngõ Tự Do                   0.3200      0.1400          0.0900              0.0000    0.0000      0.0000     0.0000           0.5500    
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa  0.0000      0.0000          0.0480              0.1900    0.0900      0.0450     0.0800           0.4530    
+
+   Kiểm tra tính khớp cộng từng món:
+   [1] Cơm bình dân tự chọn ngõ Tự Do      : 0.2560 + 0.1120 + 0.0900 + 0.1900 + 0.0450 + 0.0000 + 0.0800 = 0.7730  (điểm 0.7730)
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU   : 0.0640 + 0.1120 + 0.0000 + 0.1900 + 0.0450 + 0.0900 + 0.0800 = 0.5810  (điểm 0.5810)
+   [23] Bánh mì pate chả ngõ Tự Do         : 0.3200 + 0.1400 + 0.0900 + 0.0000 + 0.0000 + 0.0000 + 0.0000 = 0.5500  (điểm 0.5500)
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đ: 0.0000 + 0.0000 + 0.0480 + 0.1900 + 0.0900 + 0.0450 + 0.0800 = 0.4530  (điểm 0.4530)
+
+2.7. Bảng xếp hạng khi đi nhóm 4 người (giờ cao điểm)
+   #1  [1] Cơm bình dân tự chọn ngõ Tự Do                điểm = 0.7730
+   #2  [12] Bún đậu mắm tôm thập cẩm KTX NEU             điểm = 0.5810
+   #3  [23] Bánh mì pate chả ngõ Tự Do                   điểm = 0.5500 [Cảnh báo: Chờ chỗ]
+   #4  [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa  điểm = 0.4530
+
+2.8. So sánh tác động của Độ đông & Quy mô nhóm (Đi 1 người vs Đi 4 người)
+   Món                                            Điểm (1 ng)   Hạng (1 ng)   Điểm (4 ng)   Hạng (4 ng)   Thay đổi thứ hạng & Phân tích                
+   [1] Cơm bình dân tự chọn ngõ Tự Do             0.7730        #1            0.7730        #1            Giữ nguyên #1 (cân bằng tốt giữa giá, vị trí và chỗ ngồi)
+   [12] Bún đậu mắm tôm thập cẩm KTX NEU          0.5810        #3            0.5810        #2            Tăng #3 -> #2 (quán rộng, đáp ứng tốt chỗ ngồi nhóm)
+   [23] Bánh mì pate chả ngõ Tự Do                0.6300        #2            0.5500        #3            Tụt #2 -> #3 (do quy mô nhỏ, thiếu chỗ ngồi nhóm)
+   [28] Mì vằn thắn sủi cảo tôm thịt Trần Đại Nghĩa  0.4530        #4            0.4530        #4            Giữ nguyên #4 (cân bằng tốt giữa giá, vị trí và chỗ ngồi)
+
+   Nhận định quan trọng:
+     • Bánh mì pate chả ngõ Tự Do: Quy mô chỉ 10 ghế. Giờ cao điểm vắng chỗ (chỗ trống = 1.0). Khi đi 1 người,
+       quán đáp ứng đủ chỗ nên đạt điểm cao (0.6300, hạng #2). Nhưng khi đi nhóm 4 người, quán không đủ chỗ
+       (cho_ngoi_nhom = 0.25), điểm tụt xuống 0.5500 và rơi xuống hạng #3 kèm cảnh báo chờ chỗ.
+     • Bún đậu mắm tôm KTX NEU: Có 54 ghế (chỗ trống = 5.4 >= 4), đáp ứng trọn vẹn chỗ cho nhóm 4 người
+       (cho_ngoi_nhom = 1.0), vươn lên hạng #2 thay thế vị trí của quán bánh mì.
+
+2.9. Đối chiếu (assert sai số < 1e-6)
    MinMaxScaler của sklearn (đảo chiều cột chi phí) × trọng số: sai số điểm lớn nhất = 1.11e-16, cùng thứ hạng.
-   DishRecommender của dự án (4 món trên): sai số điểm lớn nhất = 1.11e-16, cùng thứ hạng.
+   DishRecommender của dự án (nhóm 4 người): sai số điểm lớn nhất = 1.11e-16, cùng thứ hạng.
+   DishRecommender của dự án (nhóm 1 người): sai số điểm lớn nhất = 1.11e-16, cùng thứ hạng.
 
 ====================================================================================================
 3. KẾT LUẬN KIỂM CHỨNG
    Phần 1: từ vựng, idf, ma trận TF-IDF, prior, likelihood, predict_proba (sai số 7.77e-16) khớp sklearn.
-   Phần 2: điểm và xếp hạng (sai số 1.11e-16) khớp sklearn và DishRecommender.
+   Phần 2: độ đông, thời gian chờ, chỗ trống, điểm và xếp hạng (sai số 1.11e-16) khớp sklearn và DishRecommender.
    ĐÃ KHỚP VỚI SKLEARN
 ====================================================================================================
