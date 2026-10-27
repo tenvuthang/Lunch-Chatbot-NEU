@@ -26,7 +26,7 @@
 
 4. **Giao diện Desktop hiện đại (PyQt6 GUI)**:
    - Khung chat hai chiều dạng bong bóng hội thoại trực quan kèm nhãn mức độ đông, thời gian chờ ước tính, số chỗ trống dự kiến, cảnh báo chờ chỗ và giải thích lý do gợi ý theo nhóm.
-   - Minh bạch hóa toàn bộ các bước tính toán trung gian: Câu gốc $\to$ Chuẩn hóa $\to$ Token $\to$ Trọng số TF-IDF $\to$ Xác suất 8 nhãn $\to$ Ràng buộc trích xuất $\to$ Độ đông & Nhóm $\to$ Bảng đóng góp 7 tiêu chí của từng món.
+   - Minh bạch hóa toàn bộ các bước tính toán trung gian: Câu gốc → Chuẩn hóa → Token → Trọng số TF-IDF → Xác suất 8 nhãn → Ràng buộc trích xuất → Độ đông & Nhóm → Bảng đóng góp 7 tiêu chí của từng món.
    - Tích hợp 4 biểu đồ trực quan Matplotlib: đóng góp 7 tiêu chí xếp chồng, phân phối xác suất ý định, đường biểu diễn thời gian chờ ước tính theo số người (1–10), và biểu đồ so sánh chỗ trống với quy mô nhóm.
 
 5. **Quản lý dữ liệu tương tác (Data Management)**:
@@ -190,28 +190,109 @@ pytest -v
 
 ## 🧮 Công thức mô hình hóa Độ đông, Thời gian chờ & Chỗ ngồi nhóm
 
-Hệ thống tích hợp mô hình ước lượng tải thực tế của quán ăn phụ thuộc vào **khung giờ đi ăn** (`khung_gio` $\in \{\text{cao\_diem}, \text{binh\_thuong}, \text{vang}\}$) và **số người đi ăn** (`so_nguoi` $\in [1, 10]$), đọc tham số từ `config/crowd_config.json`:
+Hệ thống tích hợp mô hình ước lượng tải thực tế của quán ăn phụ thuộc vào khung giờ đi ăn (`khung_gio` nhận một trong ba giá trị `cao_diem`, `binh_thuong`, `vang`) và số người đi ăn ($1 \leq N \leq 10$), đọc toàn bộ tham số từ tệp cấu hình `config/crowd_config.json`.
 
-1. **Suy luận khung giờ (`khung_gio`)**:
-   - Chế độ `"Tự động"` suy ra từ đồng hồ hệ thống (hoặc giờ trích xuất từ câu hỏi như *"12h"*, *"11 giờ rưỡi"*, *"13h15"*):
-     - Trong khoảng `gio_cao_diem` (`11:30` – `13:00`): `cao_diem` ($\text{he\_so\_khung\_gio} = 1.0$).
-     - Từ `11:00` đến trước `11:30` và từ sau `13:00` đến `14:00`: `binh_thuong` ($\text{he\_so\_khung\_gio} = 0.6$).
-     - Các khung giờ còn lại: `vang` ($\text{he\_so\_khung\_gio} = 0.3$).
+### 1. Suy luận khung giờ và hệ số thời gian
 
-2. **Độ đông hiệu dụng (`do_dong_hieu_dung`)**:
-   $$\text{do\_dong\_hieu\_dung} = \text{do\_dong\_cao\_diem} \times \text{he\_so\_khung\_gio}[\text{khung\_gio}]$$
-   - Hiển thị nhãn trực quan: **Vắng** ($< 2.0$), **Vừa phải** ($2.0 - 3.5$), **Đông** ($> 3.5$).
+Khung giờ đi ăn được xác định tự động từ đồng hồ hệ thống (hoặc trích xuất từ câu hỏi như `12h`, `12h30`, `11 giờ rưỡi`, `13h15`):
 
-3. **Thời gian chờ ước tính (`thoi_gian_cho`)**:
-   $$\text{thoi\_gian\_cho} = \text{thoi\_gian\_phuc\_vu\_phut} \times \left(1 + a_{\text{eff}} \times \frac{\text{do\_dong\_hieu\_dung}}{5}\right) \times \left(1 + b \times (\text{so\_nguoi} - 1)\right)$$
-   - Mặc định $a = 1.0$, $b = 0.10$. Khi câu nói có yêu cầu **ưu tiên quán vắng** (*"chỗ nào vắng"*, *"đỡ đông"*, *"yên tĩnh"*), hệ số phạt độ đông tự động nhân đôi ($a_{\text{eff}} = 2a$) cho lần gợi ý đó.
-   - Tiêu chí `thoi_gian` khi chấm điểm sử dụng `thoi_gian_cho` (tiêu chí chi phí, chuẩn hóa Min-Max đảo chiều).
+| Khung giờ | Khoảng thời gian áp dụng | Hệ số tải thời gian $k_{\mathrm{tg}}$ | Tên mã |
+| :--- | :--- | :--- | :--- |
+| Cao điểm | Từ 11:30 đến 13:00 | 1.0 | `cao_diem` |
+| Bình thường | Từ 11:00 đến trước 11:30 và sau 13:00 đến 14:00 | 0.6 | `binh_thuong` |
+| Vắng khách | Các khoảng thời gian còn lại | 0.3 | `vang` |
 
-4. **Chỗ ngồi trống dự kiến (`cho_trong`) và Mức đáp ứng chỗ ngồi nhóm (`cho_ngoi_nhom`)**:
-   $$\text{cho\_trong} = \text{so\_cho\_ngoi} \times \left(1 - \text{he\_so\_chiem\_cho} \times \frac{\text{do\_dong\_hieu\_dung}}{5}\right)$$
-   $$\text{cho\_ngoi\_nhom} = \min\left(1,\; \frac{\text{cho\_trong}}{\text{so\_nguoi}}\right) \in [0, 1]$$
-   - `cho_ngoi_nhom` là tiêu chí lợi ích thứ 7 (`cho_ngoi`), được chuẩn hóa Min-Max nhất quán với 6 tiêu chí còn lại.
-   - Nếu $\text{cho\_trong} < \text{so\_nguoi}$, món ăn được gắn cảnh báo **"Có thể phải chờ chỗ"**. Nếu người dùng bật bộ lọc cứng *"Chỉ quán đủ chỗ cho cả nhóm"*, các quán có $\text{cho\_trong} < \text{so\_nguoi}$ sẽ bị loại bỏ (kèm gợi ý 3 món gần thỏa mãn nhất nếu không còn quán nào khớp).
+### 2. Độ đông hiệu dụng
+
+Mức độ đông đúc thực tế tại thời điểm đi ăn được tính theo công thức:
+
+```math
+c_{\mathrm{hd}} = c_0 \cdot k_{\mathrm{tg}}
+```
+
+| Ký hiệu | Ý nghĩa | Tên trong code / cấu hình |
+| :--- | :--- | :--- |
+| $c_{\mathrm{hd}}$ | Mức độ đông đúc thực tế sau khi nhân hệ số thời điểm | `do_dong_hieu_dung` trong `src/recommender.py` |
+| $c_0$ | Mức độ đông cơ sở vào giờ cao điểm trưa (thang đo 1 – 5) | `do_dong_cao_diem` trong `data/dishes_v2.csv` |
+| $k_{\mathrm{tg}}$ | Hệ số tải trọng theo khung giờ (0.3, 0.6 hoặc 1.0) | `he_so_khung_gio` trong `config/crowd_config.json` |
+
+Quy đổi mức độ đông hiệu dụng $c_{\mathrm{hd}}$ thành nhãn trực quan trên giao diện:
+- Nhãn **Vắng**: khi $c_{\mathrm{hd}}$ dưới 2.0.
+- Nhãn **Vừa phải**: khi $c_{\mathrm{hd}}$ từ 2.0 đến 3.5.
+- Nhãn **Đông**: khi $c_{\mathrm{hd}}$ trên 3.5.
+
+### 3. Thời gian chờ ước tính
+
+Thời gian chờ phục vụ thực tế của món ăn tăng dần khi quán đông khách và khi đi theo nhóm đông người:
+
+```math
+t_{\mathrm{cho}} = t_0 \cdot \left(1 + a_{\mathrm{eff}} \cdot \frac{c_{\mathrm{hd}}}{5}\right) \cdot \left(1 + b \cdot (N - 1)\right)
+```
+
+| Ký hiệu | Ý nghĩa | Tên trong code / cấu hình |
+| :--- | :--- | :--- |
+| $t_{\mathrm{cho}}$ | Thời gian chờ phục vụ ước tính thực tế (phút) | `thoi_gian_cho` trong `src/recommender.py` |
+| $t_0$ | Thời gian chế biến và phục vụ cơ bản của quán (phút) | `thoi_gian_phuc_vu_phut` trong `data/dishes_v2.csv` |
+| $c_{\mathrm{hd}}$ | Mức độ đông hiệu dụng của quán tại thời điểm đi ăn | `do_dong_hieu_dung` trong `src/recommender.py` |
+| $a_{\mathrm{eff}}$ | Hệ số tác động của độ đông ($a_{\mathrm{eff}} = 2a$ khi ưu tiên quán vắng, ngược lại $a_{\mathrm{eff}} = a$) | `a_effective` / `a` trong `config/crowd_config.json` |
+| $b$ | Hệ số điều chỉnh trễ theo số người trong nhóm ($b = 0.10$) | `b` trong `config/crowd_config.json` |
+| $N$ | Số người trong nhóm đi ăn ($1 \leq N \leq 10$, mặc định $N = 1$) | `so_nguoi` / `num_people` trong `src/recommender.py` |
+
+Khi chấm điểm xếp hạng, tiêu chí thời gian sử dụng $t_{\mathrm{cho}}$ thay vì $t_0$ và được chuẩn hóa theo tiêu chí chi phí (thời gian chờ càng ngắn thì điểm càng cao).
+
+### 4. Chỗ ngồi trống dự kiến và Mức đáp ứng chỗ ngồi nhóm
+
+Số ghế trống ước tính tại quán và tỷ lệ đáp ứng chỗ ngồi cho nhóm đi ăn:
+
+```math
+s_{\mathrm{trong}} = S \cdot \left(1 - \gamma \cdot \frac{c_{\mathrm{hd}}}{5}\right)
+```
+
+```math
+s_{\mathrm{nhom}} = \min\left(1,\; \frac{s_{\mathrm{trong}}}{N}\right)
+```
+
+| Ký hiệu | Ý nghĩa | Tên trong code / cấu hình |
+| :--- | :--- | :--- |
+| $s_{\mathrm{trong}}$ | Số chỗ ngồi còn trống dự kiến tại quán (ghế) | `cho_trong` trong `src/recommender.py` |
+| $S$ | Tổng quy mô chỗ ngồi của quán (ghế, từ 6 đến 85 chỗ) | `so_cho_ngoi` trong `data/dishes_v2.csv` |
+| $\gamma$ | Hệ số ngưỡng chiếm chỗ tới hạn ($\gamma = 0.90$) | `he_so_chiem_cho` trong `config/crowd_config.json` |
+| $c_{\mathrm{hd}}$ | Mức độ đông hiệu dụng của quán | `do_dong_hieu_dung` trong `src/recommender.py` |
+| $s_{\mathrm{nhom}}$ | Tỷ lệ đáp ứng chỗ ngồi cho nhóm ($0 \leq s_{\mathrm{nhom}} \leq 1$) | `cho_ngoi_nhom` trong `src/recommender.py` |
+| $N$ | Số người đi ăn trong nhóm ($1 \leq N \leq 10$) | `so_nguoi` / `num_people` trong `src/recommender.py` |
+
+Quy tắc cảnh báo và lọc cứng chỗ ngồi:
+- Nếu $s_{\mathrm{trong}} < N$, món ăn được gắn cờ cảnh báo `Có thể phải chờ chỗ` trên thẻ gợi ý.
+- Khi người dùng tích chọn bộ lọc cứng `Chỉ quán đủ chỗ cho cả nhóm` (`require_enough_seats`), hệ thống lọc bỏ các quán có $s_{\mathrm{trong}} < N$. Nếu không còn món nào thỏa mãn, hệ thống tự động đề xuất 3 món gần đạt nhất (`near_matches`).
+
+### 5. Chuẩn hóa Min-Max và Chấm điểm đa tiêu chí (7 tiêu chí)
+
+Giá trị của từng tiêu chí $j$ cho món ăn $i$ được chuẩn hóa về đoạn $[0, 1]$.
+
+Với tiêu chí chi phí (giá tiền, khoảng cách, thời gian chờ - giá trị càng nhỏ càng tốt):
+
+```math
+v_{ij} = \frac{\max_k x_{kj} - x_{ij}}{\max_k x_{kj} - \min_k x_{kj}}
+```
+
+Với tiêu chí lợi ích (độ no, dinh dưỡng, độ ngon, chỗ ngồi nhóm - giá trị càng lớn càng tốt):
+
+```math
+v_{ij} = \frac{x_{ij} - \min_k x_{kj}}{\max_k x_{kj} - \min_k x_{kj}}
+```
+
+Tổng điểm gợi ý của món ăn $i$ được xác định theo phương pháp tổng có trọng số (Simple Additive Weighting - SAW):
+
+```math
+\mathrm{Score}_i = \sum_{j=1}^{7} w_j \cdot v_{ij}
+```
+
+| Ký hiệu | Ý nghĩa | Tên trong code / cấu hình |
+| :--- | :--- | :--- |
+| $x_{ij}$ | Giá trị tiêu chí $j$ của món $i$ (trong đó thời gian là $t_{\mathrm{cho}}$, chỗ ngồi là $s_{\mathrm{nhom}}$) | Thuộc tính món ăn và chỉ số tải thực tế |
+| $v_{ij}$ | Điểm chuẩn hóa Min-Max của tiêu chí $j$ ở món $i$ ($0 \leq v_{ij} \leq 1$) | `normalized_criteria` trong `src/recommender.py` |
+| $w_j$ | Trọng số tiêu chí $j$ tương ứng với nhóm nhu cầu ($\sum_{j=1}^{7} w_j = 1$) | Hồ sơ trọng số trong `config/profiles.json` |
+| $\mathrm{Score}_i$ | Tổng điểm gợi ý của món ăn $i$ dùng để xếp hạng ưu tiên | `score` trong `src/recommender.py` |
 
 ---
 
@@ -240,7 +321,7 @@ Tập dữ liệu mặc định đang dùng trong toàn hệ thống là `data/d
 - `nguon_du_lieu`: Nguồn gốc thông tin (`"mô phỏng"`, `"quan sát"`, hoặc `"khảo sát"`).
 
 ### 3. Cấu hình độ đông & Trọng số 7 tiêu chí
-- **`config/crowd_config.json`**: Cấu hình hệ số khung giờ (`cao_diem`: 1.0, `binh_thuong`: 0.6, `vang`: 0.3), giờ cao điểm (`["11:30", "13:00"]`), tham số mô hình hóa tải $a = 1.0, b = 0.10$ và hệ số ngưỡng chiếm chỗ (`he_so_chiem_cho`: 0.9). Có thể tùy chỉnh trực tiếp trong tab **⚙️ Tham số** trên giao diện hoặc khôi phục mặc định bằng một cú nhấp chuột.
+- **`config/crowd_config.json`**: Cấu hình hệ số khung giờ (`cao_diem`: 1.0, `binh_thuong`: 0.6, `vang`: 0.3), giờ cao điểm (`["11:30", "13:00"]`), tham số mô hình hóa tải $a$ (mặc định 1.0), $b$ (mặc định 0.10) và hệ số ngưỡng chiếm chỗ (`he_so_chiem_cho`: 0.9). Có thể tùy chỉnh trực tiếp trong tab **⚙️ Tham số** trên giao diện hoặc khôi phục mặc định bằng một cú nhấp chuột.
 - **`config/profiles.json`**: Cấu hình trọng số 7 tiêu chí (`gia`, `khoang_cach`, `thoi_gian`, `do_no`, `dinh_duong`, `do_ngon`, `cho_ngoi`) cho 6 nhóm nhu cầu chính của sinh viên NEU. Nhóm `nhanh_gon` (0.16) và `can_bang` (0.14) ưu tiên chỗ ngồi sẵn có cao hơn, trong khi `no_bung` (0.06) và `ngon_doi_gio` (0.06) ưu tiên khẩu phần và hương vị hơn.
 
 > [!NOTE]
@@ -280,9 +361,9 @@ Toàn bộ số liệu dưới đây được trích xuất trực tiếp từ c
 
 ### 3. Khớp kiểm chứng tính tay với lý thuyết (Chương 2)
 Trong tệp `outputs/worked_example.txt`, toàn bộ các bước tính toán thủ công:
-- Bước 1: Tính toán từ vựng, Smooth IDF, ma trận TF-IDF (L2-norm), xác suất tiên nghiệm $P(C)$, likelihood có làm mịn Laplace $\alpha = 0.5$, và suy diễn xác suất hậu nghiệm $P(C|x)$ cho câu thử `"tìm quán cơm giá rẻ"`.
-- Bước 2: Chuẩn hóa Min-Max đa tiêu chí (đảo chiều chi phí), tính toán lượng đóng góp $w \times v$ và xếp hạng 4 món ăn theo nhóm nhu cầu `tiet_kiem`.
-- Kết quả tính toán bằng công thức toán học hoàn toàn trùng khớp với đầu ra của thư viện `scikit-learn` với sai số tuyệt đối $< 10^{-15}$ (`ĐÃ KHỚP VỚI SKLEARN`).
+- Bước 1: Tính toán từ vựng, Smooth IDF, ma trận TF-IDF (L2-norm), xác suất tiên nghiệm $P(C)$, likelihood có làm mịn Laplace $\alpha$ (hệ số 0.5), và suy diễn xác suất hậu nghiệm $P(C \mid x)$ cho câu thử `"tìm quán cơm giá rẻ"`.
+- Bước 2: Chuẩn hóa Min-Max đa tiêu chí (đảo chiều chi phí), tính toán lượng đóng góp $w_j \cdot v_{ij}$ và xếp hạng 4 món ăn theo nhóm nhu cầu `tiet_kiem`.
+- Kết quả tính toán bằng công thức toán học hoàn toàn trùng khớp với đầu ra của thư viện `scikit-learn` với sai số tuyệt đối nhỏ hơn $10^{-15}$ (`ĐÃ KHỚP VỚI SKLEARN`).
 
 ---
 
